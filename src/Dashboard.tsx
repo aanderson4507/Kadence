@@ -4,6 +4,7 @@ import Breakdown from "./Breakdown";
 import Goals from "./Goals";
 import PrioritySetter from "./PrioritySetter";
 import TodoList, { initialTasks, type Task } from "./TodoList";
+import VisualPlanner from "./VisualPlanner";
 
 type View = {
   label: string;
@@ -16,6 +17,7 @@ const initialViews: View[] = [
   { label: "To do", icon: "/assets/tab-todo-selected.svg" },
   { label: "Breakdown", icon: "/assets/tab-breakdown-todo.svg" },
   { label: "Priority", icon: "/assets/tab-priority-todo.svg" },
+  { label: "Visual Planner", icon: "/assets/planner-tab-chart.svg" },
 ];
 
 type UtilityMenu = "notifications" | "settings" | "profile" | null;
@@ -228,6 +230,9 @@ function Dashboard() {
       <div className="dashboard-content" hidden={activeView !== "Priority"}>
         <PrioritySetter tasks={tasks} setTasks={setTasks} />
       </div>
+      <div className="dashboard-content" hidden={activeView !== "Visual Planner"}>
+        <VisualPlanner />
+      </div>
       <section
         aria-label="Welcome"
         className="welcome-area"
@@ -235,7 +240,8 @@ function Dashboard() {
           activeView === "To do" ||
           activeView === "Breakdown" ||
           activeView === "Goals" ||
-          activeView === "Priority"
+          activeView === "Priority" ||
+          activeView === "Visual Planner"
         }
       >
         <div className="welcome-card">

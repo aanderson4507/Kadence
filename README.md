@@ -44,3 +44,8 @@ priority. Saved priority changes stay in sync with the to-do list until refresh.
 The Goals view organizes sample goals into big, medium, and small categories.
 Filter categories, add goals, mark goals complete, and open the highlighted
 goal's Breakdown view. Goal changes are kept in page state and reset on refresh.
+
+The Visual Planner displays a sample weekly schedule. Navigate between weeks,
+select or edit scheduled tasks, switch between week and day views, and add tasks
+with a category, date, time, duration, and description. Planner changes are kept
+in page state and reset on refresh.
