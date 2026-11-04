@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 import "./App.css";
 import Breakdown from "./Breakdown";
+import Goals from "./Goals";
 import PrioritySetter from "./PrioritySetter";
 import TodoList, { initialTasks, type Task } from "./TodoList";
 
@@ -216,6 +217,14 @@ function Dashboard() {
       <div className="dashboard-content" hidden={activeView !== "Breakdown"}>
         <Breakdown />
       </div>
+      <div className="dashboard-content" hidden={activeView !== "Goals"}>
+        <Goals
+          activeView={activeView}
+          onOpenBreakdown={() => setActiveView("Breakdown")}
+          onOpenSettings={() => toggleMenu("settings")}
+          onSelectView={setActiveView}
+        />
+      </div>
       <div className="dashboard-content" hidden={activeView !== "Priority"}>
         <PrioritySetter tasks={tasks} setTasks={setTasks} />
       </div>
@@ -225,6 +234,7 @@ function Dashboard() {
         hidden={
           activeView === "To do" ||
           activeView === "Breakdown" ||
+          activeView === "Goals" ||
           activeView === "Priority"
         }
       >

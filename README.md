@@ -40,3 +40,7 @@ the summary and resets when the page is refreshed.
 
 The Priority view lets you search tasks, select one, and save or reset its
 priority. Saved priority changes stay in sync with the to-do list until refresh.
+
+The Goals view organizes sample goals into big, medium, and small categories.
+Filter categories, add goals, mark goals complete, and open the highlighted
+goal's Breakdown view. Goal changes are kept in page state and reset on refresh.
