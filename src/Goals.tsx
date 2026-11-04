@@ -6,10 +6,12 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
+import type { Priority } from "./TodoList";
 import "./Goals.css";
 
 type GoalCategory = "Big goals" | "Medium goals" | "Small goals";
 type GoalFilter = "All goals" | GoalCategory;
+type MediumGoalDraft = { id: string; title: string };
 
 type Goal = {
   id: string;
@@ -20,6 +22,10 @@ type Goal = {
   detail: string;
   status?: "New goal";
   spotlight?: boolean;
+  targetDate?: string;
+  priority?: Priority;
+  description?: string;
+  parentId?: string;
 };
 
 const initialGoals: Goal[] = [
@@ -130,9 +136,17 @@ function Goals({
   const [filter, setFilter] = useState<GoalFilter>("All goals");
   const [filterOpen, setFilterOpen] = useState(false);
   const [addGoalOpen, setAddGoalOpen] = useState(false);
-  const [newGoalTitle, setNewGoalTitle] = useState("");
+  const [newGoalTitle, setNewGoalTitle] = useState("Get an internship");
   const [newGoalCategory, setNewGoalCategory] =
     useState<GoalCategory>("Big goals");
+  const [newGoalTargetDate, setNewGoalTargetDate] = useState("2026-12-15");
+  const [newGoalPriority, setNewGoalPriority] = useState<Priority>("High");
+  const [newGoalDescription, setNewGoalDescription] = useState(
+    "Find and secure a summer internship related to computer science.",
+  );
+  const [mediumGoalDrafts, setMediumGoalDrafts] = useState<MediumGoalDraft[]>(
+    [],
+  );
   const addGoalDialog = useRef<HTMLDialogElement>(null);
 
   const displayedCategories =
@@ -161,20 +175,47 @@ function Goals({
     const title = newGoalTitle.trim();
     if (!title) return;
 
+    const goalId = `goal-${crypto.randomUUID()}`;
+    const childGoals = mediumGoalDrafts
+      .map((draft) => draft.title.trim())
+      .filter(Boolean)
+      .map((childTitle): Goal => ({
+        id: `goal-${crypto.randomUUID()}`,
+        category: "Medium goals",
+        title: childTitle,
+        progress: 0,
+        completed: false,
+        detail: `Linked to: ${title}`,
+        parentId: goalId,
+      }));
     const goal: Goal = {
-      id: `goal-${crypto.randomUUID()}`,
+      id: goalId,
       category: newGoalCategory,
       title,
       progress: 0,
       completed: false,
-      detail: "New goal · 0 of 0 steps completed",
+      detail: `New goal · 0 of ${childGoals.length} steps completed`,
       status: "New goal",
+      targetDate: newGoalTargetDate,
+      priority: newGoalPriority,
+      description: newGoalDescription.trim(),
     };
-    setGoals((currentGoals) => [...currentGoals, goal]);
+    setGoals((currentGoals) => [...currentGoals, goal, ...childGoals]);
     setFilter("All goals");
     setNewGoalTitle("");
     setNewGoalCategory("Big goals");
+    setNewGoalTargetDate("");
+    setNewGoalPriority("High");
+    setNewGoalDescription("");
+    setMediumGoalDrafts([]);
     setAddGoalOpen(false);
+  }
+
+  function addMediumGoalDraft() {
+    setMediumGoalDrafts((drafts) => [
+      ...drafts,
+      { id: `medium-goal-${crypto.randomUUID()}`, title: "" },
+    ]);
   }
 
   function closeDialogOnBackdrop(event: MouseEvent<HTMLDialogElement>) {
@@ -370,7 +411,7 @@ function Goals({
             <div className="goals-dialog__heading">
               <div>
                 <h2 id="add-goal-title">Add a goal</h2>
-                <p>Choose a category and give your goal a name.</p>
+                <p>Create a goal and break it into manageable steps.</p>
               </div>
               <button
                 aria-label="Close dialog"
@@ -381,29 +422,113 @@ function Goals({
                 ×
               </button>
             </div>
-            <label>
-              Goal name
-              <input
-                autoFocus
-                onChange={(event) => setNewGoalTitle(event.target.value)}
-                placeholder="e.g. Learn a new skill"
-                required
-                value={newGoalTitle}
-              />
-            </label>
-            <label>
-              Goal category
-              <select
-                onChange={(event) =>
-                  setNewGoalCategory(event.target.value as GoalCategory)
-                }
-                value={newGoalCategory}
+            <div className="goals-dialog__fields">
+              <label className="goals-dialog__field">
+                Goal name
+                <input
+                  autoFocus
+                  onChange={(event) => setNewGoalTitle(event.target.value)}
+                  placeholder="e.g. Learn a new skill"
+                  required
+                  value={newGoalTitle}
+                />
+              </label>
+              <label className="goals-dialog__field">
+                Goal size
+                <select
+                  onChange={(event) =>
+                    setNewGoalCategory(event.target.value as GoalCategory)
+                  }
+                  value={newGoalCategory}
+                >
+                  {categories.map(({ label }) => (
+                    <option key={label} value={label}>
+                      {label.slice(0, -1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="goals-dialog__field-row">
+                <label className="goals-dialog__field">
+                  Target date
+                  <input
+                    onChange={(event) => setNewGoalTargetDate(event.target.value)}
+                    type="date"
+                    value={newGoalTargetDate}
+                  />
+                </label>
+                <label className="goals-dialog__field">
+                  Priority
+                  <select
+                    onChange={(event) =>
+                      setNewGoalPriority(event.target.value as Priority)
+                    }
+                    value={newGoalPriority}
+                  >
+                    {(["Very High", "High", "Medium", "Low", "Very Low", "None"] as Priority[]).map(
+                      (priority) => (
+                        <option key={priority} value={priority}>
+                          {priority}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              </div>
+              <label className="goals-dialog__field">
+                Description
+                <textarea
+                  onChange={(event) => setNewGoalDescription(event.target.value)}
+                  rows={3}
+                  value={newGoalDescription}
+                />
+              </label>
+            </div>
+            <section aria-labelledby="goals-breakdown-title" className="goals-dialog__breakdown">
+              <div className="goals-dialog__breakdown-heading">
+                <h3 id="goals-breakdown-title">Break this goal down</h3>
+                <p>Add smaller goals to help you get there.</p>
+              </div>
+              {mediumGoalDrafts.map((draft, index) => (
+                <div className="goals-dialog__child-goal" key={draft.id}>
+                  <label className="goals-dialog__field">
+                    Medium goal {index + 1}
+                    <input
+                      onChange={(event) =>
+                        setMediumGoalDrafts((drafts) =>
+                          drafts.map((item) =>
+                            item.id === draft.id
+                              ? { ...item, title: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                      placeholder="Enter a medium goal"
+                      value={draft.title}
+                    />
+                  </label>
+                  <button
+                    aria-label={`Remove medium goal ${index + 1}`}
+                    className="goals-dialog__remove-child"
+                    onClick={() =>
+                      setMediumGoalDrafts((drafts) =>
+                        drafts.filter((item) => item.id !== draft.id),
+                      )
+                    }
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                className="goals-dialog__add-child"
+                onClick={addMediumGoalDraft}
+                type="button"
               >
-                {categories.map(({ label }) => (
-                  <option key={label} value={label}>{label}</option>
-                ))}
-              </select>
-            </label>
+                <span aria-hidden="true">＋</span> Add a medium goal
+              </button>
+            </section>
             <div className="goals-dialog__actions">
               <button
                 className="goals-dialog__cancel"
@@ -412,7 +537,9 @@ function Goals({
               >
                 Cancel
               </button>
-              <button className="goals-add-button" type="submit">Add goal</button>
+              <button className="goals-dialog__submit" type="submit">
+                <span aria-hidden="true">＋</span> Add goal
+              </button>
             </div>
           </form>
         </dialog>
