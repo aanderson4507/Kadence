@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from "react";
 import "./App.css";
+import Breakdown from "./Breakdown";
 import TodoList from "./TodoList";
 
 type View = {
@@ -210,10 +211,13 @@ function Dashboard() {
       <div className="dashboard-content" hidden={activeView !== "To do"}>
         <TodoList />
       </div>
+      <div className="dashboard-content" hidden={activeView !== "Breakdown"}>
+        <Breakdown />
+      </div>
       <section
         aria-label="Welcome"
         className="welcome-area"
-        hidden={activeView === "To do"}
+        hidden={activeView === "To do" || activeView === "Breakdown"}
       >
         <div className="welcome-card">
           <h1>Welcome to Kadence!</h1>

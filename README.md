@@ -34,5 +34,6 @@ The dashboard opens to the to-do list with sample tasks. Tasks can be filtered
 by priority (Very High through None), added, completed, and deleted. Changes are
 kept in page state and reset when the page is refreshed.
 
-The to-do list is the default dashboard view. Its sample tasks and changes are
-held in memory and reset when the page is refreshed.
+The Breakdown view displays the sample website goal, its connected goals, and
+ten milestones. Milestones can be completed or reopened; progress is updated in
+the summary and resets when the page is refreshed.
