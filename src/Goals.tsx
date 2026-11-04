@@ -139,7 +139,7 @@ function Goals({
   const [newGoalTitle, setNewGoalTitle] = useState("Get an internship");
   const [newGoalCategory, setNewGoalCategory] =
     useState<GoalCategory>("Big goals");
-  const [newGoalTargetDate, setNewGoalTargetDate] = useState("2026-12-15");
+  const [newGoalTargetDate, setNewGoalTargetDate] = useState("Dec 15, 2026");
   const [newGoalPriority, setNewGoalPriority] = useState<Priority>("High");
   const [newGoalDescription, setNewGoalDescription] = useState(
     "Find and secure a summer internship related to computer science.",
@@ -453,7 +453,7 @@ function Goals({
                   Target date
                   <input
                     onChange={(event) => setNewGoalTargetDate(event.target.value)}
-                    type="date"
+                    placeholder="Dec 15, 2026"
                     value={newGoalTargetDate}
                   />
                 </label>
