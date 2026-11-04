@@ -9,6 +9,16 @@
   background: #fff;
 }
 
+.dashboard-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.app-shell [hidden] {
+  display: none;
+}
+
 .workspace-header {
   position: relative;
   z-index: 1;
