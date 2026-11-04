@@ -1,7 +1,8 @@
 import { useState, type KeyboardEvent } from "react";
 import "./App.css";
 import Breakdown from "./Breakdown";
-import TodoList from "./TodoList";
+import PrioritySetter from "./PrioritySetter";
+import TodoList, { initialTasks, type Task } from "./TodoList";
 
 type View = {
   label: string;
@@ -24,6 +25,7 @@ function Dashboard() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenu, setOpenMenu] = useState<UtilityMenu>(null);
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
 
   const visibleViews = views.filter((view) =>
     view.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
@@ -209,15 +211,22 @@ function Dashboard() {
       </nav>
 
       <div className="dashboard-content" hidden={activeView !== "To do"}>
-        <TodoList />
+        <TodoList tasks={tasks} setTasks={setTasks} />
       </div>
       <div className="dashboard-content" hidden={activeView !== "Breakdown"}>
         <Breakdown />
       </div>
+      <div className="dashboard-content" hidden={activeView !== "Priority"}>
+        <PrioritySetter tasks={tasks} setTasks={setTasks} />
+      </div>
       <section
         aria-label="Welcome"
         className="welcome-area"
-        hidden={activeView === "To do" || activeView === "Breakdown"}
+        hidden={
+          activeView === "To do" ||
+          activeView === "Breakdown" ||
+          activeView === "Priority"
+        }
       >
         <div className="welcome-card">
           <h1>Welcome to Kadence!</h1>

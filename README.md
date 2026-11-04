@@ -37,3 +37,6 @@ kept in page state and reset when the page is refreshed.
 The Breakdown view displays the sample website goal, its connected goals, and
 ten milestones. Milestones can be completed or reopened; progress is updated in
 the summary and resets when the page is refreshed.
+
+The Priority view lets you search tasks, select one, and save or reset its
+priority. Saved priority changes stay in sync with the to-do list until refresh.

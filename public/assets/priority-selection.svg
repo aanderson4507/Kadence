@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Selection indicator">
+<rect x="0.75" y="0.75" width="16.5" height="16.5" rx="8.25" fill="white"/>
+<rect x="0.75" y="0.75" width="16.5" height="16.5" rx="8.25" stroke="#456B54" stroke-width="1.5"/>
+<circle id="Selected dot" cx="9" cy="9" r="4" fill="#456B54"/>
+</g>
+</svg>

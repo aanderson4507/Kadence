@@ -1,10 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type KeyboardEvent,
+  type SetStateAction,
+} from "react";
 import "./TodoList.css";
 
-type Priority = "Very High" | "High" | "Medium" | "Low" | "Very Low" | "None";
+export type Priority = "Very High" | "High" | "Medium" | "Low" | "Very Low" | "None";
 type TaskStatus = "All tasks" | "Active" | "Completed";
 
-type Task = {
+export type Task = {
   id: string;
   title: string;
   category: string;
@@ -12,7 +20,7 @@ type Task = {
   completed: boolean;
 };
 
-const initialTasks: Task[] = [
+export const initialTasks: Task[] = [
   {
     id: "calc-review",
     title: "Complete Test Review for Calc.",
@@ -41,13 +49,31 @@ const initialTasks: Task[] = [
     priority: "High",
     completed: true,
   },
+  {
+    id: "apply-jobs",
+    title: "Apply to jobs",
+    category: "Career",
+    priority: "Medium",
+    completed: false,
+  },
+  {
+    id: "gym-pr",
+    title: "Hit a new PR in gym",
+    category: "Fitness",
+    priority: "None",
+    completed: false,
+  },
 ];
 
 const taskStatuses: TaskStatus[] = ["All tasks", "Active", "Completed"];
 const priorities: Priority[] = ["Very High", "High", "Medium", "Low", "Very Low", "None"];
 
-function TodoList() {
-  const [tasks, setTasks] = useState(initialTasks);
+type TodoListProps = {
+  tasks: Task[];
+  setTasks: Dispatch<SetStateAction<Task[]>>;
+};
+
+function TodoList({ tasks, setTasks }: TodoListProps) {
   const [taskStatus, setTaskStatus] = useState<TaskStatus>("All tasks");
   const [priorityFilter, setPriorityFilter] = useState<Priority>("High");
   const [priorityMenuOpen, setPriorityMenuOpen] = useState(false);
