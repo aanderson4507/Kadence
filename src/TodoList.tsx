@@ -18,6 +18,7 @@ export type Task = {
   category: string;
   priority: Priority;
   completed: boolean;
+  dueDate?: string;
 };
 
 export const initialTasks: Task[] = [
@@ -82,6 +83,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
   );
   const [showCompleted, setShowCompleted] = useState(true);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
   const [openTaskMenu, setOpenTaskMenu] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const quickAddInput = useRef<HTMLInputElement>(null);
@@ -126,11 +128,13 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
       category: "General",
       priority: priorityFilter,
       completed: false,
+      dueDate: newTaskDueDate,
     };
     setTasks((currentTasks) => [...currentTasks, task]);
     setTaskStatus("All tasks");
     setShowCompleted(true);
     setNewTaskTitle("");
+    setNewTaskDueDate("");
     setAnnouncement(`Added task: ${title}`);
   }
 
@@ -372,6 +376,12 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
               <div className="todo-task-details">
                 <span className="todo-task-title">{task.title}</span>
                 <span className="todo-task-category">{task.category}</span>
+                {task.dueDate && (
+                  <span className="todo-task-due-date">
+                  Due {new Date(`${task.dueDate}T00:00:00`).toLocaleDateString()}
+                  </span>
+                )}
+              
               </div>
 
               <div className="todo-task-priority">
@@ -437,6 +447,12 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
             }
             ref={quickAddInput}
             value={newTaskTitle}
+          />
+          <input
+            aria-label="Task due date"
+            onChange={(event) => setNewTaskDueDate(event.target.value)}
+            type="date"
+            value={newTaskDueDate}
           />
           <button aria-label="Add task" type="submit">
             ↵

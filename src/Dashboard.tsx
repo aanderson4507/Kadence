@@ -28,6 +28,21 @@ function Dashboard() {
   const [openMenu, setOpenMenu] = useState<UtilityMenu>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
 
+  const upcomingReminders = tasks.filter((task) => {
+  if (task.completed || !task.dueDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(`${task.dueDate}T00:00:00`);
+
+  const daysUntilDue = Math.ceil(
+    (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return daysUntilDue >= 0 && daysUntilDue <= 7;
+});
+
   const visibleViews = views.filter((view) =>
     view.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   );
@@ -125,6 +140,7 @@ function Dashboard() {
             label="Notifications"
             onClick={() => toggleMenu("notifications")}
             src="/assets/notifications.svg"
+            badgeCount={upcomingReminders.length}
           />
           <UtilityButton
             active={openMenu === "settings"}
@@ -150,9 +166,24 @@ function Dashboard() {
             {openMenu === "notifications" && (
               <>
                 <strong>Notifications</strong>
-                <span>You&apos;re all caught up.</span>
+
+                {upcomingReminders.length === 0 ? (
+                  <span>You&apos;re all caught up.</span>
+                ) : (
+                  <div className="notification-list">
+                    {upcomingReminders.map((task) => (
+                      <div className="notification-item" key={task.id}>
+                        <strong>{task.title}</strong>
+                        <span>
+                          Due{" "}
+                          {new Date(`${task.dueDate}T00:00:00`).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
-            )}
+          )}
             {openMenu === "settings" && (
               <>
                 <strong>Settings</strong>
@@ -265,9 +296,10 @@ type UtilityButtonProps = {
   label: string;
   onClick: () => void;
   src: string;
+  badgeCount?: number;
 };
 
-function UtilityButton({ active, label, onClick, src }: UtilityButtonProps) {
+function UtilityButton({ active, label, onClick, src, badgeCount }: UtilityButtonProps) {
   return (
     <div className="utility-control">
       <button
@@ -278,6 +310,11 @@ function UtilityButton({ active, label, onClick, src }: UtilityButtonProps) {
         type="button"
       >
         <img src={src} alt="" />
+        {badgeCount !== undefined && badgeCount > 0 && (
+          <span className="notification-badge">
+            {badgeCount}
+          </span>
+        )}
       </button>
     </div>
   );
