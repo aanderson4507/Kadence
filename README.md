@@ -50,3 +50,10 @@ select tasks, and switch between week and day views. Add tasks with a due date,
 type, goal size, and optional linked task; edit task details, status, schedule,
 description, and notes; or delete tasks with confirmation. Planner changes are
 kept in page state and reset on refresh.
+
+Open Settings from the workspace gear or the Goals sidebar to update profile,
+planner, reminder, goal, task carryover, weekly review, and privacy preferences.
+Settings changes stay in page state until saved, except privacy preferences,
+which apply immediately. Data export downloads the current preferences, tasks,
+goals, and planner events as JSON. Account deletion is for review only in this
+demo.

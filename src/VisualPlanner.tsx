@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
   type CSSProperties,
   type FormEvent,
@@ -250,7 +251,11 @@ function formatDuration(duration: number) {
   return `${duration} ${duration === 1 ? "hour" : "hours"}`;
 }
 
-function VisualPlanner() {
+function VisualPlanner({
+  onDataChange,
+}: {
+  onDataChange: (events: unknown[]) => void;
+}) {
   const [events, setEvents] = useState(initialEvents);
   const [weekStart, setWeekStart] = useState(initialWeekStart);
   const [view, setView] = useState<PlannerView>("Week");
@@ -266,6 +271,10 @@ function VisualPlanner() {
 
   const selectedEvent =
     events.find((event) => event.id === selectedEventId) ?? null;
+
+  useEffect(() => {
+    onDataChange(events);
+  }, [events, onDataChange]);
   const weekDays = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
   );
