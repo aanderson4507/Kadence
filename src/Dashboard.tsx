@@ -3,7 +3,9 @@ import "./App.css";
 import Breakdown from "./Breakdown";
 import Goals from "./Goals";
 import PrioritySetter from "./PrioritySetter";
+import Settings from "./Settings";
 import TodoList, { initialTasks, type Task } from "./TodoList";
+import VisualPlanner from "./VisualPlanner";
 
 type View = {
   label: string;
@@ -11,16 +13,28 @@ type View = {
 };
 
 const initialViews: View[] = [
-  { label: "Calendar", icon: "/assets/tab-calendar.svg" },
   { label: "Goals", icon: "/assets/tab-goals-todo.svg" },
   { label: "To do", icon: "/assets/tab-todo-selected.svg" },
   { label: "Breakdown", icon: "/assets/tab-breakdown-todo.svg" },
   { label: "Priority", icon: "/assets/tab-priority-todo.svg" },
+  { label: "Visual Planner", icon: "/assets/planner-tab-chart.svg" },
 ];
 
-type UtilityMenu = "notifications" | "settings" | "profile" | null;
+type UtilityMenu = "notifications" | "profile" | null;
 
-function Dashboard() {
+type ThemePreference = "Light mode" | "Dark mode" | "System default";
+
+function Dashboard({
+  themePreference,
+  onThemeChange,
+}: {
+  themePreference: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
+}) {
+  const isDarkMode =
+    themePreference === "Dark mode" ||
+    (themePreference === "System default" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
   const [views, setViews] = useState(initialViews);
   const [activeView, setActiveView] = useState<string | null>("To do");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -72,6 +86,9 @@ useEffect(() => {
 
   return daysUntilDue >= 0 && daysUntilDue <= 7;
 });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [goalsForExport, setGoalsForExport] = useState<unknown[]>([]);
+  const [plannerEventsForExport, setPlannerEventsForExport] = useState<unknown[]>([]);
 
   const visibleViews = views.filter((view) =>
     view.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
@@ -88,9 +105,44 @@ useEffect(() => {
   }
 
   function toggleMenu(menu: Exclude<UtilityMenu, null>) {
+    setSettingsOpen(false);
     setOpenMenu((currentMenu) => (currentMenu === menu ? null : menu));
     setSearchOpen(false);
     setSearchQuery("");
+  }
+
+  function toggleSettings() {
+    setSettingsOpen((isOpen) => !isOpen);
+    setOpenMenu(null);
+    setSearchOpen(false);
+    setSearchQuery("");
+  }
+
+  function exportKadenceData(preferences: object) {
+    const serializedData = JSON.stringify(
+      {
+        exportedAt: new Date().toISOString(),
+        preferences,
+        tasks,
+        goals: goalsForExport,
+        plannerEvents: plannerEventsForExport,
+      },
+      null,
+      2,
+    );
+    if (serializedData === undefined) {
+      throw new Error("Unable to serialize Kadence data for export.");
+    }
+
+    const data = new Blob([serializedData], { type: "application/json" });
+    const downloadUrl = URL.createObjectURL(data);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "kadence-data-export.json";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
   }
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -119,9 +171,22 @@ useEffect(() => {
 
         <div className="workspace-utilities">
           <div className="current-date">
-            <span className="icon-frame icon-frame--date" aria-hidden="true">
-              <img src="/assets/sun-todo.svg" alt="" />
-            </span>
+            <button
+              aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+              aria-pressed={isDarkMode}
+              className="theme-toggle"
+              onClick={() =>
+                onThemeChange(isDarkMode ? "Light mode" : "Dark mode")
+              }
+              type="button"
+            >
+              <img
+                alt=""
+                height="16"
+                src={isDarkMode ? "/assets/moon-dark.svg" : "/assets/sun-todo.svg"}
+                width="16"
+              />
+            </button>
             <span>Thursday, October 8</span>
           </div>
 
@@ -175,9 +240,9 @@ useEffect(() => {
             }
           />
           <UtilityButton
-            active={openMenu === "settings"}
+            active={settingsOpen}
             label="Settings"
-            onClick={() => toggleMenu("settings")}
+            onClick={toggleSettings}
             src="/assets/settings.svg"
           />
           <div className="utility-control">
@@ -254,7 +319,7 @@ useEffect(() => {
         )}
       </header>
 
-      <nav aria-label="Workspace views" className="workspace-tabs">
+      <nav aria-label="Workspace views" className="workspace-tabs" hidden={settingsOpen}>
         {visibleViews.map((view) => (
           <div
             className={`view-tab${activeView === view.label ? " view-tab--active" : ""}`}
@@ -265,6 +330,7 @@ useEffect(() => {
               className="view-tab__select"
               onClick={() => {
                 setActiveView(view.label);
+                setSettingsOpen(false);
                 setOpenMenu(null);
               }}
               type="button"
@@ -296,38 +362,56 @@ useEffect(() => {
         )}
       </nav>
 
-      <div className="dashboard-content" hidden={activeView !== "To do"}>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "To do"}>
         <TodoList tasks={tasks} setTasks={setTasks} />
       </div>
       <div className="dashboard-content" hidden={activeView !== "Breakdown"}>
         <Breakdown tasks={tasks} />
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Breakdown"}>
+        <Breakdown />
       </div>
-      <div className="dashboard-content" hidden={activeView !== "Goals"}>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Goals"}>
         <Goals
           activeView={activeView}
+          onDataChange={setGoalsForExport}
           onOpenBreakdown={() => setActiveView("Breakdown")}
-          onOpenSettings={() => toggleMenu("settings")}
+          onOpenSettings={() => {
+            setSettingsOpen(true);
+            setOpenMenu(null);
+          }}
           onSelectView={setActiveView}
         />
       </div>
-      <div className="dashboard-content" hidden={activeView !== "Priority"}>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Priority"}>
         <PrioritySetter tasks={tasks} setTasks={setTasks} />
+      </div>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Visual Planner"}>
+        <VisualPlanner onDataChange={setPlannerEventsForExport} />
+      </div>
+      <div className="dashboard-content" hidden={!settingsOpen}>
+        <Settings
+          isDarkMode={isDarkMode}
+          onExport={exportKadenceData}
+          onThemeChange={onThemeChange}
+          themePreference={themePreference}
+        />
       </div>
       <section
         aria-label="Welcome"
         className="welcome-area"
-        hidden={
+        hidden={settingsOpen ||
           activeView === "To do" ||
           activeView === "Breakdown" ||
           activeView === "Goals" ||
-          activeView === "Priority"
+          activeView === "Priority" ||
+          activeView === "Visual Planner"
         }
       >
         <div className="welcome-card">
           <h1>Welcome to Kadence!</h1>
           <div className="welcome-instructions">
             <p>To start setting goals, please click on the &quot;Goals&quot; tab</p>
-            <p>To view your calendar, please click on the &quot;Visual Planner&quot; tab</p>
+            <p>To view your schedule, please click on the &quot;Visual Planner&quot; tab</p>
             <p>
               To set or change the priority of your goals, please click on the
               &quot;Priority&quot; tab

@@ -1,0 +1,665 @@
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-text: #e6ece8;
+  --color-muted: #93a39a;
+  --color-border: #1f2a24;
+  --color-brand: #8db69b;
+  --color-brand-soft: #22312d;
+  --theme-page: #0f1410;
+  --theme-surface: #111814;
+  --theme-raised: #141d17;
+  --theme-subtle: #171e1b;
+  --theme-subtle-alt: #0d1412;
+  --theme-input: #121a15;
+  --theme-hover: #1b2821;
+  --theme-text: #f3f7f4;
+  --theme-muted: #8fa39a;
+  --theme-border: #1f2a24;
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root {
+  color: var(--theme-text);
+  background: var(--theme-page);
+}
+
+html[data-theme="dark"] :is(
+  .app-shell,
+  .login-page,
+  .todo-workspace,
+  .breakdown-page,
+  .goals-workspace,
+  .priority-setter,
+  .visual-planner,
+  .visual-planner--form,
+  .settings-page,
+  .welcome-area
+) {
+  color: var(--theme-text);
+  background-color: var(--theme-page);
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+html[data-theme="dark"] :is(.workspace-header, .workspace-tabs) {
+  border-color: var(--theme-border);
+  background: var(--theme-page);
+}
+
+html[data-theme="dark"] .workspace-header,
+html[data-theme="dark"] .workspace-tabs {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .brand-name,
+html[data-theme="dark"] .current-date,
+html[data-theme="dark"] .view-tab--active {
+  color: #d7e4da;
+}
+
+html[data-theme="dark"] .current-date,
+html[data-theme="dark"] .view-tab {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .brand-divider,
+html[data-theme="dark"] .workspace-header,
+html[data-theme="dark"] .workspace-tabs {
+  border-color: var(--theme-border);
+}
+
+.theme-toggle {
+  display: grid;
+  width: 20px;
+  height: 24px;
+  flex: 0 0 auto;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.theme-toggle img {
+  display: block;
+}
+
+.theme-toggle:hover {
+  background: var(--color-brand-soft);
+}
+
+html[data-theme="dark"] .icon-button:hover,
+html[data-theme="dark"] .profile-button:hover,
+html[data-theme="dark"] .view-tab__close:hover,
+html[data-theme="dark"] .restore-views:hover {
+  background: var(--theme-hover);
+}
+
+html[data-theme="dark"] .utility-popover,
+html[data-theme="dark"] .welcome-card {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-surface);
+}
+
+html[data-theme="dark"] .utility-popover span {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .search-field input,
+html[data-theme="dark"] .restore-views {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-input);
+}
+
+html[data-theme="dark"] .tab-empty-message {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .todo-page-heading h1,
+html[data-theme="dark"] .todo-list-identity h2,
+html[data-theme="dark"] .todo-task-title,
+html[data-theme="dark"] .todo-quick-add input {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .todo-page-heading p,
+html[data-theme="dark"] .todo-list-identity p,
+html[data-theme="dark"] .priority-filter,
+html[data-theme="dark"] .todo-status-tab,
+html[data-theme="dark"] .todo-progress-summary,
+html[data-theme="dark"] .todo-column-labels,
+html[data-theme="dark"] .todo-task-category,
+html[data-theme="dark"] .todo-empty-state,
+html[data-theme="dark"] .todo-card-footer,
+html[data-theme="dark"] .todo-quick-add input::placeholder,
+html[data-theme="dark"] .todo-quick-add button {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .todo-card,
+html[data-theme="dark"] .priority-select-trigger,
+html[data-theme="dark"] .priority-options,
+html[data-theme="dark"] .priority-option,
+html[data-theme="dark"] .todo-task,
+html[data-theme="dark"] .todo-task-checkbox,
+html[data-theme="dark"] .todo-quick-add button,
+html[data-theme="dark"] .todo-task-menu,
+html[data-theme="dark"] .todo-task-menu button {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-page);
+}
+
+html[data-theme="dark"] .todo-card,
+html[data-theme="dark"] .todo-task-menu {
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .todo-list-filters,
+html[data-theme="dark"] .todo-task,
+html[data-theme="dark"] .todo-quick-add {
+  border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] .todo-column-labels,
+html[data-theme="dark"] .todo-task:nth-child(odd),
+html[data-theme="dark"] .todo-card-footer {
+  background: var(--theme-subtle);
+}
+
+html[data-theme="dark"] .todo-task:nth-child(even) {
+  background: var(--theme-subtle-alt);
+}
+
+html[data-theme="dark"] .todo-task--completed .todo-task-title {
+  color: #8f9c93;
+}
+
+html[data-theme="dark"] .todo-task--completed .todo-task-checkbox {
+  border-color: #8db69b;
+  background: var(--color-brand-soft);
+}
+
+html[data-theme="dark"] .todo-priority-badge {
+  color: #c8d9c8;
+  background: #22312d;
+}
+
+html[data-theme="dark"] .todo-task--completed .todo-priority-badge {
+  color: var(--theme-muted);
+  background: #1b2320;
+}
+
+html[data-theme="dark"] .priority-select-trigger--open,
+html[data-theme="dark"] .priority-option:hover,
+html[data-theme="dark"] .priority-option:focus-visible,
+html[data-theme="dark"] .todo-task-menu button:hover,
+html[data-theme="dark"] .todo-task-menu-button:hover {
+  background: var(--theme-hover);
+}
+
+html[data-theme="dark"] .priority-option--selected,
+html[data-theme="dark"] .priority-option--selected:hover,
+html[data-theme="dark"] .priority-option--selected:focus-visible {
+  border-color: var(--theme-border);
+  color: #c8d9c8;
+  background: #22312d;
+}
+
+html[data-theme="dark"] .todo-task-menu button {
+  color: #e29a91;
+}
+
+html[data-theme="dark"] .todo-task-menu button:hover {
+  color: #f0b2aa;
+}
+
+html[data-theme="dark"] .completed-visibility-toggle {
+  background: #526058;
+}
+
+html[data-theme="dark"] .completed-visibility-toggle--on {
+  background: #456b54;
+}
+
+html[data-theme="dark"] .breakdown-summary,
+html[data-theme="dark"] .breakdown-card {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+}
+
+html[data-theme="dark"] .breakdown-progress__stats > div,
+html[data-theme="dark"] .breakdown-connected-goal,
+html[data-theme="dark"] .breakdown-milestone--completed {
+  border-color: var(--theme-border);
+  background: var(--theme-raised);
+}
+
+html[data-theme="dark"] .breakdown-milestone {
+  border-color: var(--theme-border);
+  background: var(--theme-page);
+}
+
+html[data-theme="dark"] .breakdown-milestone__toggle {
+  border-color: #526058;
+  background: var(--theme-input);
+}
+
+html[data-theme="dark"] .breakdown-milestone--completed .breakdown-milestone__toggle {
+  border-color: #8db69b;
+  background: var(--color-brand-soft);
+}
+
+html[data-theme="dark"] .goals-workspace,
+html[data-theme="dark"] .goals-sidebar,
+html[data-theme="dark"] .goals-main {
+  color: var(--theme-text);
+  background: var(--theme-page);
+}
+
+html[data-theme="dark"] .goals-sidebar {
+  border-color: var(--theme-border);
+  background: #111814;
+}
+
+html[data-theme="dark"] .goals-sidebar__eyebrow,
+html[data-theme="dark"] .goals-sidebar__progress h2,
+html[data-theme="dark"] .goals-sidebar__progress > p,
+html[data-theme="dark"] .goals-sidebar__count span,
+html[data-theme="dark"] .goals-main__header p,
+html[data-theme="dark"] .goals-column__heading p,
+html[data-theme="dark"] .goal-card__body > p,
+html[data-theme="dark"] .goal-card__progress > span,
+html[data-theme="dark"] .goals-footer,
+html[data-theme="dark"] .goals-footer__legend span {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .goals-sidebar__count strong,
+html[data-theme="dark"] .goals-main__header h1,
+html[data-theme="dark"] .goals-column__heading h2,
+html[data-theme="dark"] .goal-card__body h3 {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .goals-sidebar__progress-track,
+html[data-theme="dark"] .goals-column__count {
+  background: var(--theme-subtle);
+}
+
+html[data-theme="dark"] .goals-intention,
+html[data-theme="dark"] .goals-banner,
+html[data-theme="dark"] .goal-spotlight,
+html[data-theme="dark"] .goal-spotlight button {
+  border-color: var(--theme-border);
+  color: #b6cabc;
+  background: #1b2a22;
+}
+
+html[data-theme="dark"] .goals-intention h2,
+html[data-theme="dark"] .goal-spotlight strong,
+html[data-theme="dark"] .goal-spotlight button {
+  color: #c8d9c8;
+}
+
+html[data-theme="dark"] .goals-intention p,
+html[data-theme="dark"] .goal-spotlight > span {
+  color: #99ad9f;
+}
+
+html[data-theme="dark"] .goals-column,
+html[data-theme="dark"] .goal-card {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+}
+
+html[data-theme="dark"] .goal-card {
+  background: #141d17;
+}
+
+html[data-theme="dark"] .goals-filter__trigger,
+html[data-theme="dark"] .goals-filter__menu,
+html[data-theme="dark"] .goals-filter__option,
+html[data-theme="dark"] .goals-dialog,
+html[data-theme="dark"] .goals-dialog__field input,
+html[data-theme="dark"] .goals-dialog__field select,
+html[data-theme="dark"] .goals-dialog__field textarea,
+html[data-theme="dark"] .goals-dialog__remove-child,
+html[data-theme="dark"] .goals-dialog__cancel {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-input);
+}
+
+html[data-theme="dark"] .goals-dialog__heading h2,
+html[data-theme="dark"] .goals-dialog__breakdown-heading h3,
+html[data-theme="dark"] .goals-dialog__field {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .goals-dialog__heading p,
+html[data-theme="dark"] .goals-dialog__breakdown-heading p,
+html[data-theme="dark"] .goals-dialog__close {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .goals-dialog__breakdown {
+  border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] .goals-dialog__add-child {
+  border-color: #344b3b;
+  color: #c8d9c8;
+  background: #1b2a22;
+}
+
+html[data-theme="dark"] .goals-dialog__add-child:hover,
+html[data-theme="dark"] .goals-filter__option:hover,
+html[data-theme="dark"] .goals-filter__option--selected {
+  background: #22312d;
+}
+
+html[data-theme="dark"] .goals-dialog::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+
+html[data-theme="dark"] .priority-editor,
+html[data-theme="dark"] .priority-task-selection {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+}
+
+html[data-theme="dark"] .priority-search,
+html[data-theme="dark"] .priority-list-labels,
+html[data-theme="dark"] .priority-task,
+html[data-theme="dark"] .priority-selection-summary,
+html[data-theme="dark"] .priority-selected-task,
+html[data-theme="dark"] .priority-choice,
+html[data-theme="dark"] .priority-task__indicator,
+html[data-theme="dark"] .priority-choice__radio {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-subtle);
+}
+
+html[data-theme="dark"] .priority-list-labels,
+html[data-theme="dark"] .priority-selection-summary,
+html[data-theme="dark"] .priority-selected-task {
+  background: var(--theme-raised);
+}
+
+html[data-theme="dark"] .priority-task:hover,
+html[data-theme="dark"] .priority-choice:hover,
+html[data-theme="dark"] .priority-choice:focus-within {
+  background: var(--theme-hover);
+}
+
+html[data-theme="dark"] .priority-task--selected,
+html[data-theme="dark"] .priority-task--selected:hover,
+html[data-theme="dark"] .priority-choice--selected,
+html[data-theme="dark"] .priority-choice--selected:hover,
+html[data-theme="dark"] .priority-choice--selected:focus-within {
+  border-color: #526858;
+  background: #22312d;
+}
+
+html[data-theme="dark"] .priority-task__details > span,
+html[data-theme="dark"] .priority-task__value,
+html[data-theme="dark"] .priority-selection-summary,
+html[data-theme="dark"] .priority-selected-task > span,
+html[data-theme="dark"] .priority-selected-task > div,
+html[data-theme="dark"] .priority-guidance {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .visual-planner {
+  background: var(--theme-page);
+}
+
+html[data-theme="dark"] .planner-header__title h1,
+html[data-theme="dark"] .planner-task-info__heading h2,
+html[data-theme="dark"] .planner-task-info__summary h3,
+html[data-theme="dark"] .planner-week-navigation h2,
+html[data-theme="dark"] .planner-day-heading strong,
+html[data-theme="dark"] .planner-create-card__identity h1,
+html[data-theme="dark"] .planner-edit-page__header h1 {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .planner-header__intro > p,
+html[data-theme="dark"] .planner-task-info__heading > p,
+html[data-theme="dark"] .planner-task-info__details,
+html[data-theme="dark"] .planner-task-info__empty,
+html[data-theme="dark"] .planner-calendar__tools > span,
+html[data-theme="dark"] .planner-time-heading,
+html[data-theme="dark"] .planner-day-heading span,
+html[data-theme="dark"] .planner-time-column span,
+html[data-theme="dark"] .planner-legend,
+html[data-theme="dark"] .planner-create-card__heading > p,
+html[data-theme="dark"] .planner-edit-page__header p,
+html[data-theme="dark"] .planner-edit-field,
+html[data-theme="dark"] .planner-edit-field > label,
+html[data-theme="dark"] .planner-edit-field legend,
+html[data-theme="dark"] .planner-edit-time > span,
+html[data-theme="dark"] .planner-edit-field > small {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .planner-task-info,
+html[data-theme="dark"] .planner-calendar,
+html[data-theme="dark"] .planner-create-card,
+html[data-theme="dark"] .planner-edit-page__footer {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+}
+
+html[data-theme="dark"] .planner-edit-button,
+html[data-theme="dark"] .planner-nav-button,
+html[data-theme="dark"] .planner-day-heading,
+html[data-theme="dark"] .planner-schedule,
+html[data-theme="dark"] .planner-view-picker__menu,
+html[data-theme="dark"] .planner-view-picker__option,
+html[data-theme="dark"] .planner-create-field input,
+html[data-theme="dark"] .planner-create-field select,
+html[data-theme="dark"] .planner-segmented-control,
+html[data-theme="dark"] .planner-segmented-control button,
+html[data-theme="dark"] .planner-edit-field input,
+html[data-theme="dark"] .planner-edit-field select,
+html[data-theme="dark"] .planner-edit-field textarea,
+html[data-theme="dark"] .planner-category-chip,
+html[data-theme="dark"] .planner-status-chips button,
+html[data-theme="dark"] .planner-week-context__day > span:last-child,
+html[data-theme="dark"] .planner-create-card__actions button,
+html[data-theme="dark"] .planner-edit-page__top-actions button,
+html[data-theme="dark"] .planner-edit-page__footer button {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-input);
+}
+
+html[data-theme="dark"] .planner-calendar__toolbar,
+html[data-theme="dark"] .planner-days-heading,
+html[data-theme="dark"] .planner-legend,
+html[data-theme="dark"] .planner-create-card__actions {
+  border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] .planner-day-heading + .planner-day-heading,
+html[data-theme="dark"] .planner-day-column {
+  border-color: #26332b;
+}
+
+html[data-theme="dark"] .planner-day-column {
+  background-image: linear-gradient(
+    to bottom,
+    transparent calc(100% - 1px),
+    #26332b calc(100% - 1px)
+  );
+}
+
+html[data-theme="dark"] .planner-day-heading--active,
+html[data-theme="dark"] .planner-view-picker__trigger,
+html[data-theme="dark"] .planner-view-picker__option:hover,
+html[data-theme="dark"] .planner-view-picker__option[aria-selected="true"],
+html[data-theme="dark"] .planner-segmented-control button.is-selected,
+html[data-theme="dark"] .planner-status-chips button.is-selected,
+html[data-theme="dark"] .planner-week-context__day > span:last-child.is-selected {
+  border-color: #456b54;
+  color: #c8d9c8;
+  background: #1b2a22;
+}
+
+html[data-theme="dark"] .planner-day-heading--active span,
+html[data-theme="dark"] .planner-day-heading--active strong,
+html[data-theme="dark"] .planner-week-context__day > span:last-child.is-selected {
+  color: #c8d9c8;
+}
+
+html[data-theme="dark"] .planner-create-card__identity > span {
+  color: #c8d9c8;
+  background: #1b2a22;
+}
+
+html[data-theme="dark"] .planner-event--personal,
+html[data-theme="dark"] .planner-category-chip--personal.is-selected {
+  border-color: #624355;
+  color: #e2a8c1;
+  background: #32232c;
+}
+
+html[data-theme="dark"] .planner-event--focus,
+html[data-theme="dark"] .planner-category-chip--focus.is-selected {
+  border-color: #394866;
+  color: #a9bee8;
+  background: #202a3a;
+}
+
+html[data-theme="dark"] .planner-event--wellbeing,
+html[data-theme="dark"] .planner-category-chip--wellbeing.is-selected {
+  border-color: #485c38;
+  color: #b5d193;
+  background: #242f1e;
+}
+
+html[data-theme="dark"] .planner-event--work,
+html[data-theme="dark"] .planner-category-chip--work.is-selected {
+  border-color: #67443d;
+  color: #e2a69b;
+  background: #342522;
+}
+
+html[data-theme="dark"] .planner-edit-page__footer,
+html[data-theme="dark"] .planner-danger-zone__confirm button {
+  background: var(--theme-surface);
+}
+
+html[data-theme="dark"] .planner-create-card__actions .planner-create-card__submit,
+html[data-theme="dark"] .planner-edit-page__top-actions .planner-edit-page__save,
+html[data-theme="dark"] .planner-edit-page__footer .planner-edit-page__save,
+html[data-theme="dark"] .planner-danger-zone__confirm .planner-danger-zone__delete {
+  border-color: #39765a;
+  color: #fff;
+  background: #39765a;
+}
+
+html[data-theme="dark"] .planner-danger-zone__button,
+html[data-theme="dark"] .planner-danger-zone__confirm {
+  border-color: #67443d;
+  color: #e2a69b;
+  background: #342522;
+}
+
+html[data-theme="dark"] .login-page {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .login-introduction p,
+html[data-theme="dark"] .login-status,
+html[data-theme="dark"] .login-signup,
+html[data-theme="dark"] .login-footer {
+  color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .login-field > label {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .login-field input {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-input);
+}
+
+html[data-theme="dark"] .login-field input::placeholder {
+  color: #849188;
+}
+
+html[data-theme="dark"] .login-field input:focus-visible {
+  border-color: #8db69b;
+}
+
+html[data-theme="dark"] .password-visibility:hover {
+  background: var(--theme-hover);
+}
+
+html[data-theme="dark"] .login-link {
+  color: #8db69b;
+}
+
+html[data-theme="dark"] .settings-page[data-theme="dark"] {
+  color: var(--theme-text);
+  background: var(--theme-page);
+}
+
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-sidebar,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-panel,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-delete-modal {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+}
+
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-sidebar h1,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-page-header h2,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-panel > header h3,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-text-field,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-field__label,
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-delete-modal h2 {
+  color: var(--theme-text);
+}
+
+html[data-theme="dark"] .settings-page[data-theme="dark"] input:not([type="radio"]):not([type="checkbox"]),
+html[data-theme="dark"] .settings-page[data-theme="dark"] select {
+  color: var(--theme-text);
+  background: var(--theme-input);
+}
+
+html[data-theme="dark"] .settings-page[data-theme="dark"] .settings-modal-backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+
+html[data-theme="dark"] .app-shell:has(.settings-page[data-theme="dark"]) .workspace-header {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-page);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="dark"] :is(
+    .app-shell,
+    .login-page,
+    .todo-workspace,
+    .breakdown-page,
+    .goals-workspace,
+    .priority-setter,
+    .visual-planner,
+    .visual-planner--form,
+    .settings-page,
+    .welcome-area
+  ) {
+    transition: none;
+  }
+}
