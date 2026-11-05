@@ -121,6 +121,7 @@ const categories: {
 
 type GoalsProps = {
   activeView: string | null;
+  onDataChange: (goals: unknown[]) => void;
   onOpenBreakdown: () => void;
   onOpenSettings: () => void;
   onSelectView: (view: string | null) => void;
@@ -128,6 +129,7 @@ type GoalsProps = {
 
 function Goals({
   activeView,
+  onDataChange,
   onOpenBreakdown,
   onOpenSettings,
   onSelectView,
@@ -154,6 +156,10 @@ function Goals({
       ? categories
       : categories.filter((category) => category.label === filter);
   const activeGoalCount = goals.length;
+
+  useEffect(() => {
+    onDataChange(goals);
+  }, [goals, onDataChange]);
 
   useEffect(() => {
     const dialog = addGoalDialog.current;
