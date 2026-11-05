@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import "./Breakdown.css";
 import type { Task } from "./TodoList";
 
@@ -10,170 +10,116 @@ type ProgressStyle = CSSProperties & {
   "--progress-angle": string;
 };
 
-function parseDate(dateString: string) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
+type Milestone = {
+  id: string;
+  title: string;
+  completed: boolean;
+  date: string;
+};
 
-function getWeekStart(date: Date) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
+const initialMilestones: Milestone[] = [
+  { id: "launch-scope", title: "Define launch scope", completed: true, date: "September 12" },
+  { id: "homepage-copy", title: "Write homepage copy", completed: true, date: "September 18" },
+  { id: "about-page", title: "Complete about page draft", completed: true, date: "September 22" },
+  { id: "content-review", title: "Finalize content review", completed: true, date: "September 28" },
+  { id: "design-system", title: "Approve design system", completed: true, date: "October 2" },
+  { id: "website-build", title: "Build and QA the site", completed: false, date: "October 27" },
+  { id: "launch-prep", title: "Prepare launch materials", completed: false, date: "November 8" },
+  { id: "website-launch", title: "Launch the new website", completed: false, date: "November 22" },
+];
 
-  const day = (start.getDay() + 6) % 7;
-  start.setDate(start.getDate() - day);
+const connectedGoals = [
+  {
+    category: "Medium goals",
+    title: "Finalize content and copy",
+    description: "Complete homepage, about page, and supporting launch copy.",
+  },
+  {
+    category: "Medium goals",
+    title: "Complete design review",
+    description: "Approve the design system, templates, and final visual direction.",
+  },
+  {
+    category: "Medium goals",
+    title: "Build and QA the site",
+    description: "Complete the website build, QA checklist, and launch preparation.",
+  },
+];
 
-  return start;
-}
+function Breakdown({ tasks: _tasks }: BreakdownProps) {
+  const [milestones, setMilestones] = useState(initialMilestones);
+  const completedCount = milestones.filter((milestone) => milestone.completed).length;
+  const progress = Math.round((completedCount / milestones.length) * 100);
+  const nextMilestone = milestones.find((milestone) => !milestone.completed);
 
-function addDays(date: Date, days: number) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function formatDate(date: Date) {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function Breakdown({ tasks }: BreakdownProps) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const weekStart = getWeekStart(today);
-  const weekEnd = addDays(weekStart, 7);
-
-  // Tasks completed this week or scheduled for this week.
-  const completedTasks = tasks.filter((task) => {
-    if (!task.completed) return false;
-
-    const completedThisWeek =
-      task.completedDate &&
-      parseDate(task.completedDate) >= weekStart &&
-      parseDate(task.completedDate) < weekEnd;
-
-    const dueThisWeek =
-      task.dueDate &&
-      parseDate(task.dueDate) >= weekStart &&
-      parseDate(task.dueDate) < weekEnd;
-
-    return completedThisWeek || dueThisWeek;
-  });
-
-  // Incomplete tasks whose deadlines have passed.
-  const overdueTasks = tasks.filter(
-    (task) =>
-      !task.completed &&
-      task.dueDate &&
-      parseDate(task.dueDate) < today,
-  );
-
-  // Incomplete tasks due between today and the end of this week.
-  const pendingTasks = tasks.filter(
-    (task) =>
-      !task.completed &&
-      task.dueDate &&
-      parseDate(task.dueDate) >= today &&
-      parseDate(task.dueDate) < weekEnd,
-  );
-
-  const totalTasks =
-    completedTasks.length + pendingTasks.length + overdueTasks.length;
-
-  const completedCount = completedTasks.length;
-  const pendingCount = pendingTasks.length;
-  const overdueCount = overdueTasks.length;
-
-  const progress =
-    totalTasks === 0
-      ? 0
-      : Math.round((completedCount / totalTasks) * 100);
-
-  const gaugeAngle = (progress / 100) * 180;
-
-  const gaugeStyle: ProgressStyle = {
-    "--progress-angle": `${gaugeAngle}deg`,
-  };
+  function toggleMilestone(id: string) {
+    setMilestones((current) =>
+      current.map((milestone) =>
+        milestone.id === id
+          ? { ...milestone, completed: !milestone.completed }
+          : milestone,
+      ),
+    );
+  }
 
   return (
     <main className="breakdown-page">
-      <h1 className="breakdown-page__title">Weekly Review</h1>
+      <header className="breakdown-page__header">
+        <h1>Goal breakdown</h1>
+      </header>
 
-      <section className="breakdown-summary">
+      <section className="breakdown-summary" aria-labelledby="breakdown-goal-title">
         <div className="breakdown-summary__heading">
           <div className="breakdown-summary__identity">
-            <h2>Your Weekly Progress</h2>
-            <p>
-              Review your accomplishments and see what still needs attention.
-            </p>
+            <h2 id="breakdown-goal-title">Launch the new website</h2>
+            <p>Plan, design, and implement the webpage.</p>
           </div>
-
-          <span className="breakdown-status">
-            {totalTasks === 0
-              ? "No activity"
-              : progress === 100
-                ? "Completed"
-                : "In progress"}
-          </span>
+          <span className="breakdown-status">In progress</span>
         </div>
 
         <div className="breakdown-metrics">
           <div>
-            <span>Week begins</span>
-            <strong>{formatDate(weekStart)}</strong>
+            <span>Begin date</span>
+            <strong>September 12, 2026</strong>
           </div>
-
           <div>
-            <span>Week ends</span>
-            <strong>{formatDate(addDays(weekEnd, -1))}</strong>
+            <span>Target end date</span>
+            <strong>November 22, 2026</strong>
           </div>
-
           <div>
-            <span>Total tasks</span>
-            <strong>{totalTasks}</strong>
+            <span>Current progress</span>
+            <strong>{progress}% complete</strong>
           </div>
         </div>
 
         <div className="breakdown-progress">
           <div
-            aria-label={`${progress}% of weekly tasks completed`}
+            aria-label={`${progress}% of goal complete`}
             className="breakdown-gauge"
             data-progress={progress}
             role="img"
-            style={gaugeStyle}
           >
-            <img
-              alt=""
-              className="breakdown-gauge__track"
-              src="/assets/progress-track.svg"
+            <img alt="" className="breakdown-gauge__track" src="/assets/progress-track.svg" />
+            <div
+              className="breakdown-gauge__dynamic-arc"
+              style={
+                {
+                  "--progress-angle": `${progress * 1.8}deg`,
+                } as ProgressStyle
+              }
             />
-
-            <img
-              alt=""
-              className="breakdown-gauge__arc"
-              src="/assets/progress-arc.svg"
-            />
-
-            <div className="breakdown-gauge__dynamic-arc" />
-
             <div className="breakdown-gauge__label">
               <strong>{progress}%</strong>
-              <span>completed</span>
+              <span>of goal</span>
             </div>
           </div>
 
           <div className="breakdown-progress__details">
             <div className="breakdown-progress__copy">
-              <h3>
-                {completedCount} of {totalTasks} tasks completed
-              </h3>
-
+              <h3>{completedCount} of {milestones.length} milestones complete</h3>
               <p>
-                {totalTasks === 0
-                  ? "Add tasks with due dates to start tracking your weekly progress."
-                  : "Keep track of your progress and prioritize the tasks that still need attention."}
+                The strongest momentum is in content and design review. The remaining work is
+                concentrated in build, QA, and launch preparation.
               </p>
             </div>
 
@@ -182,117 +128,68 @@ function Breakdown({ tasks }: BreakdownProps) {
                 <span>Completed</span>
                 <strong>{completedCount}</strong>
               </div>
-
               <div>
-                <span>Pending</span>
-                <strong>{pendingCount}</strong>
+                <span>Remaining</span>
+                <strong>{milestones.length - completedCount}</strong>
               </div>
-
               <div>
-                <span>Overdue</span>
-                <strong>{overdueCount}</strong>
-              </div>
-            </div>
-
-            <div className="weekly-review-progress">
-              <div className="weekly-review-progress__labels">
-                <span>Weekly completion</span>
-                <strong>{progress}%</strong>
-              </div>
-
-              <div
-                aria-label={`${progress}% completed`}
-                className="weekly-review-progress__track"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progress}
-              >
-                <div
-                  className="weekly-review-progress__fill"
-                  style={{ width: `${progress}%` }}
-                />
+                <span>Next milestone</span>
+                <strong>{nextMilestone?.date ?? "Complete"}</strong>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="weekly-review-grid">
-        <TaskGroup
-          title="Completed Tasks"
-          count={completedCount}
-          tasks={completedTasks}
-          type="completed"
-        />
+      <div className="breakdown-lower">
+        <section className="breakdown-card" aria-labelledby="milestones-title">
+          <div className="breakdown-card__heading">
+            <h2 id="milestones-title">Milestones</h2>
+            <p>Key steps in your goal that indicate progression.</p>
+          </div>
+          <div className="breakdown-milestones">
+            {milestones.map((milestone) => (
+              <article
+                className={`breakdown-milestone${milestone.completed ? " breakdown-milestone--completed" : ""}`}
+                key={milestone.id}
+              >
+                <button
+                  aria-label={`${milestone.completed ? "Mark" : "Complete"} ${milestone.title}`}
+                  aria-pressed={milestone.completed}
+                  className="breakdown-milestone__toggle"
+                  onClick={() => toggleMilestone(milestone.id)}
+                  type="button"
+                >
+                  {milestone.completed && <img alt="" src="/assets/breakdown-check.svg" />}
+                </button>
+                <div className="breakdown-milestone__details">
+                  <strong>{milestone.title}</strong>
+                  <span>{milestone.completed ? "Completed" : "Upcoming"} · {milestone.date}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        <TaskGroup
-          title="Pending Tasks"
-          count={pendingCount}
-          tasks={pendingTasks}
-          type="pending"
-        />
-
-        <TaskGroup
-          title="Overdue Tasks"
-          count={overdueCount}
-          tasks={overdueTasks}
-          type="overdue"
-        />
+        <section className="breakdown-card breakdown-connected" aria-labelledby="connected-goals-title">
+          <div className="breakdown-card__heading">
+            <h2 id="connected-goals-title">Connected Goals</h2>
+            <p>Medium and small goals connected to the current goal.</p>
+          </div>
+          <div className="breakdown-goal-group">
+            <h3>Medium goals</h3>
+            <div className="breakdown-goal-group__list">
+              {connectedGoals.map((goal) => (
+                <article className="breakdown-connected-goal" key={goal.title}>
+                  <h4>{goal.title}</h4>
+                  <p>{goal.description}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </main>
-  );
-}
-
-type TaskGroupProps = {
-  title: string;
-  count: number;
-  tasks: Task[];
-  type: "completed" | "pending" | "overdue";
-};
-
-function TaskGroup({ title, count, tasks, type }: TaskGroupProps) {
-  return (
-    <section className="breakdown-card weekly-review-column">
-      <div className="breakdown-card__heading">
-        <h2>{title}</h2>
-        <p>{count} {count === 1 ? "task" : "tasks"}</p>
-      </div>
-
-      <div className="weekly-review-task-list">
-        {tasks.length === 0 ? (
-          <p className="weekly-review-empty">
-            {type === "completed"
-              ? "No completed tasks this week yet."
-              : type === "pending"
-                ? "No pending tasks for the rest of this week."
-                : "No overdue tasks. You're all caught up!"}
-          </p>
-        ) : (
-          tasks.map((task) => (
-            <article className="weekly-review-task" key={task.id}>
-              <div>
-                <strong>{task.title}</strong>
-
-                <span>
-                  {type === "completed"
-                    ? `Completed ${task.completedDate ? formatDate(parseDate(task.completedDate)) : "· Due this week"}`
-                    : `Due ${task.dueDate ? formatDate(parseDate(task.dueDate)) : ""}`}
-                </span>
-              </div>
-
-              <span className={`weekly-review-tag weekly-review-tag--${type}`}>
-                {type === "completed"
-                  ? "Done"
-                  : type === "pending"
-                    ? "Pending"
-                    : "Overdue"}
-              </span>
-            </article>
-          ))
-        )}
-      </div>
-    </section>
   );
 }
 
