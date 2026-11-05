@@ -1,4 +1,9 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import "./Settings.css";
 
 type SettingsSection =
@@ -151,6 +156,15 @@ const initialSettings: SettingsValues = {
   },
 };
 
+type ThemePreference = SettingsValues["planner"]["theme"];
+
+function createInitialSettings(themePreference: ThemePreference): SettingsValues {
+  return {
+    ...initialSettings,
+    planner: { ...initialSettings.planner, theme: themePreference },
+  };
+}
+
 const sectionItems: {
   id: SettingsSection;
   label: string;
@@ -218,17 +232,40 @@ const accentOptions = [
 ];
 
 type SettingsProps = {
+  isDarkMode: boolean;
+  onThemeChange: (theme: ThemePreference) => void;
   onExport: (preferences: object) => void;
+  themePreference: ThemePreference;
 };
 
-function Settings({ onExport }: SettingsProps) {
+function Settings({
+  isDarkMode,
+  onExport,
+  onThemeChange,
+  themePreference,
+}: SettingsProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("profile");
-  const [savedSettings, setSavedSettings] = useState(initialSettings);
-  const [draft, setDraft] = useState(initialSettings);
+  const [savedSettings, setSavedSettings] = useState(() =>
+    createInitialSettings(themePreference),
+  );
+  const [draft, setDraft] = useState(() =>
+    createInitialSettings(themePreference),
+  );
   const [statusMessage, setStatusMessage] = useState("");
   const [deleteReviewOpen, setDeleteReviewOpen] = useState(false);
 
   const activeSectionInfo = sectionItems.find((item) => item.id === activeSection)!;
+
+  useEffect(() => {
+    setSavedSettings((current) => ({
+      ...current,
+      planner: { ...current.planner, theme: themePreference },
+    }));
+    setDraft((current) => ({
+      ...current,
+      planner: { ...current.planner, theme: themePreference },
+    }));
+  }, [themePreference]);
 
   function updateSetting<
     Section extends keyof SettingsValues,
@@ -300,7 +337,7 @@ function Settings({ onExport }: SettingsProps) {
   return (
     <main
       className="settings-page"
-      data-theme={draft.planner.theme === "Dark mode" ? "dark" : "light"}
+      data-theme={isDarkMode ? "dark" : "light"}
       style={{ "--settings-accent": draft.planner.accent } as CSSProperties}
     >
       <aside aria-label="Settings sections" className="settings-sidebar">
@@ -342,6 +379,7 @@ function Settings({ onExport }: SettingsProps) {
             <PlannerSettings
               value={draft.planner}
               onChange={(property, value) => updateSetting("planner", property, value)}
+              onThemeChange={onThemeChange}
             />
           )}
           {activeSection === "notifications" && (
@@ -485,16 +523,26 @@ type PlannerProperty = keyof PlannerValues;
 function PlannerSettings({
   value,
   onChange,
+  onThemeChange,
 }: {
   value: PlannerValues;
   onChange: <Property extends PlannerProperty>(
     property: Property,
     nextValue: PlannerValues[Property],
   ) => void;
+  onThemeChange: (theme: ThemePreference) => void;
 }) {
   return (
     <SettingsPanel title="Appearance and layout" description="Choose the visual theme, planner scope, and defaults that work best for your workflow.">
-      <SegmentedSetting label="Theme" options={["Light mode", "Dark mode", "System default"]} onChange={(next) => onChange("theme", next)} value={value.theme} />
+      <SegmentedSetting
+        label="Theme"
+        options={["Light mode", "Dark mode", "System default"]}
+        onChange={(next) => {
+          onChange("theme", next);
+          onThemeChange(next);
+        }}
+        value={value.theme}
+      />
       <div className="settings-field">
         <span className="settings-field__label">Accent color</span>
         <div className="settings-color-picker">

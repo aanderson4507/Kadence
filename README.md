@@ -54,6 +54,8 @@ kept in page state and reset on refresh.
 Open Settings from the workspace gear or the Goals sidebar to update profile,
 planner, reminder, goal, task carryover, weekly review, and privacy preferences.
 Settings changes stay in page state until saved, except privacy preferences,
-which apply immediately. Data export downloads the current preferences, tasks,
-goals, and planner events as JSON. Account deletion is for review only in this
-demo.
+which apply immediately. Theme changes apply immediately as well. The header
+sun/moon button switches the app between light and dark themes; the selected
+theme is saved in this browser and applies across the login, workspace, and
+Settings pages. Data export downloads the current preferences, tasks, goals,
+and planner events as JSON. Account deletion is for review only in this demo.

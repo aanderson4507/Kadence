@@ -23,7 +23,19 @@ const initialViews: View[] = [
 
 type UtilityMenu = "notifications" | "profile" | null;
 
-function Dashboard() {
+type ThemePreference = "Light mode" | "Dark mode" | "System default";
+
+function Dashboard({
+  themePreference,
+  onThemeChange,
+}: {
+  themePreference: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
+}) {
+  const isDarkMode =
+    themePreference === "Dark mode" ||
+    (themePreference === "System default" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
   const [views, setViews] = useState(initialViews);
   const [activeView, setActiveView] = useState<string | null>("To do");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -115,9 +127,22 @@ function Dashboard() {
 
         <div className="workspace-utilities">
           <div className="current-date">
-            <span className="icon-frame icon-frame--date" aria-hidden="true">
-              <img src="/assets/sun-todo.svg" alt="" />
-            </span>
+            <button
+              aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+              aria-pressed={isDarkMode}
+              className="theme-toggle"
+              onClick={() =>
+                onThemeChange(isDarkMode ? "Light mode" : "Dark mode")
+              }
+              type="button"
+            >
+              <img
+                alt=""
+                height="16"
+                src={isDarkMode ? "/assets/moon-dark.svg" : "/assets/sun-todo.svg"}
+                width="16"
+              />
+            </button>
             <span>Thursday, October 8</span>
           </div>
 
@@ -272,7 +297,12 @@ function Dashboard() {
         <VisualPlanner onDataChange={setPlannerEventsForExport} />
       </div>
       <div className="dashboard-content" hidden={!settingsOpen}>
-        <Settings onExport={exportKadenceData} />
+        <Settings
+          isDarkMode={isDarkMode}
+          onExport={exportKadenceData}
+          onThemeChange={onThemeChange}
+          themePreference={themePreference}
+        />
       </div>
       <section
         aria-label="Welcome"
