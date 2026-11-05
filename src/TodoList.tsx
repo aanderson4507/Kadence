@@ -19,9 +19,11 @@ export type Task = {
   priority: Priority;
   completed: boolean;
   dueDate?: string;
+  completedDate?: string;
 };
 
 export const initialTasks: Task[] = [
+  
   {
     id: "calc-review",
     title: "Complete Test Review for Calc.",
@@ -65,6 +67,16 @@ export const initialTasks: Task[] = [
     completed: false,
   },
 ];
+
+function getTodayDateString() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 
 const taskStatuses: TaskStatus[] = ["All tasks", "Active", "Completed"];
 const priorities: Priority[] = ["Very High", "High", "Medium", "Low", "Very Low", "None"];
@@ -128,7 +140,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
       category: "General",
       priority: priorityFilter,
       completed: false,
-      dueDate: newTaskDueDate,
+      ...(newTaskDueDate && { dueDate: newTaskDueDate }),
     };
     setTasks((currentTasks) => [...currentTasks, task]);
     setTaskStatus("All tasks");
@@ -144,9 +156,18 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
 
     setTasks((currentTasks) =>
       currentTasks.map((item) =>
-        item.id === taskId ? { ...item, completed: !item.completed } : item,
+        item.id === taskId
+          ? {
+              ...item,
+              completed: !item.completed,
+              completedDate: !item.completed
+                ? getTodayDateString()
+                : undefined,
+            }
+          : item,
       ),
     );
+
     setAnnouncement(
       `${task.completed ? "Reopened" : "Completed"} task: ${task.title}`,
     );
