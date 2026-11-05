@@ -303,12 +303,6 @@ useEffect(() => {
               </>
             )}
 
-            {openMenu === "settings" && (
-              <>
-                <strong>Settings</strong>
-                <span>Settings will be available here.</span>
-              </>
-            )}
             {openMenu === "profile" && (
               <>
                 <strong>Profile</strong>
@@ -365,10 +359,8 @@ useEffect(() => {
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "To do"}>
         <TodoList tasks={tasks} setTasks={setTasks} />
       </div>
-      <div className="dashboard-content" hidden={activeView !== "Breakdown"}>
-        <Breakdown tasks={tasks} />
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "Breakdown"}>
-        <Breakdown />
+        <Breakdown tasks={tasks} />
       </div>
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "Goals"}>
         <Goals
