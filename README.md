@@ -46,6 +46,7 @@ Filter categories, add goals, mark goals complete, and open the highlighted
 goal's Breakdown view. Goal changes are kept in page state and reset on refresh.
 
 The Visual Planner displays a sample weekly schedule. Navigate between weeks,
-select or edit scheduled tasks, switch between week and day views, and add tasks
-with a category, date, time, duration, and description. Planner changes are kept
-in page state and reset on refresh.
+select tasks, and switch between week and day views. Add tasks with a due date,
+type, goal size, and optional linked task; edit task details, status, schedule,
+description, and notes; or delete tasks with confirmation. Planner changes are
+kept in page state and reset on refresh.

@@ -1,16 +1,16 @@
 import {
-  useEffect,
-  useRef,
   useState,
   type CSSProperties,
   type FormEvent,
-  type MouseEvent,
 } from "react";
 import "./VisualPlanner.css";
 
 type PlannerCategory = "Personal" | "Focus" | "Wellbeing" | "Work";
-type PlannerStatus = "Not started" | "In progress" | "Completed";
+type PlannerStatus = "Not started" | "In progress" | "Done";
 type PlannerView = "Week" | "Day";
+type PlannerScreen = "planner" | "add" | "edit";
+type GoalSize = "Small" | "Medium" | "Big";
+type PlannerTaskType = "Project" | "Task" | "Habit";
 
 type PlannerEvent = {
   id: string;
@@ -21,9 +21,21 @@ type PlannerEvent = {
   duration: number;
   description: string;
   status: PlannerStatus;
+  taskType?: PlannerTaskType;
+  goalSize?: GoalSize;
+  linkedEventId?: string | null;
+  notes?: string;
 };
 
-type PlannerDraft = Omit<PlannerEvent, "id">;
+type PlannerDraft = Omit<
+  PlannerEvent,
+  "id" | "taskType" | "goalSize" | "linkedEventId" | "notes"
+> & {
+  taskType: PlannerTaskType;
+  goalSize: GoalSize;
+  linkedEventId: string | null;
+  notes: string;
+};
 
 const plannerCategories: PlannerCategory[] = [
   "Personal",
@@ -34,8 +46,10 @@ const plannerCategories: PlannerCategory[] = [
 const plannerStatuses: PlannerStatus[] = [
   "Not started",
   "In progress",
-  "Completed",
+  "Done",
 ];
+const taskTypes: PlannerTaskType[] = ["Project", "Task", "Habit"];
+const goalSizes: GoalSize[] = ["Small", "Medium", "Big"];
 const timeSlots = [
   { label: "12 AM", hour: 0 },
   { label: "6 AM", hour: 6 },
@@ -245,10 +259,10 @@ function VisualPlanner() {
     "project-planning",
   );
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [screen, setScreen] = useState<PlannerScreen>("planner");
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PlannerDraft>(() => createEmptyDraft());
-  const taskDialog = useRef<HTMLDialogElement>(null);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
 
   const selectedEvent =
     events.find((event) => event.id === selectedEventId) ?? null;
@@ -266,25 +280,27 @@ function VisualPlanner() {
   );
   const dayViewDate = view === "Day" ? dateFromKey(focusedDate) : null;
 
-  useEffect(() => {
-    const dialog = taskDialog.current;
-    if (dialogOpen && dialog && !dialog.open) dialog.showModal();
-    else if (!dialogOpen && dialog?.open) dialog.close();
-  }, [dialogOpen]);
-
-  function openNewEventDialog() {
+  function openNewEventPage() {
     setEditingEventId(null);
+    setDeleteConfirmationOpen(false);
     const defaultDate =
       view === "Day" || visibleDateKeys.has(focusedDate)
         ? focusedDate
         : toDateKey(weekStart);
-    setDraft(createEmptyDraft(defaultDate));
-    setDialogOpen(true);
+    setDraft({
+      ...createEmptyDraft(defaultDate),
+      linkedEventId:
+        events.find((plannerEvent) => plannerEvent.id === "project-planning")?.id ??
+        events[0]?.id ??
+        null,
+    });
+    setScreen("add");
   }
 
-  function openEditEventDialog() {
+  function openEditEventPage() {
     if (!selectedEvent) return;
     setEditingEventId(selectedEvent.id);
+    setDeleteConfirmationOpen(false);
     setDraft({
       title: selectedEvent.title,
       category: selectedEvent.category,
@@ -293,8 +309,12 @@ function VisualPlanner() {
       duration: selectedEvent.duration,
       description: selectedEvent.description,
       status: selectedEvent.status,
+      taskType: selectedEvent.taskType ?? "Project",
+      goalSize: selectedEvent.goalSize ?? "Medium",
+      linkedEventId: selectedEvent.linkedEventId ?? null,
+      notes: selectedEvent.notes ?? "",
     });
-    setDialogOpen(true);
+    setScreen("edit");
   }
 
   function movePeriod(direction: -1 | 1) {
@@ -322,6 +342,8 @@ function VisualPlanner() {
       ...draft,
       title,
       description: draft.description.trim(),
+      notes: draft.notes.trim(),
+      linkedEventId: draft.linkedEventId,
       id: editingEventId ?? `planner-event-${crypto.randomUUID()}`,
     };
 
@@ -336,15 +358,42 @@ function VisualPlanner() {
     setFocusedDate(savedEvent.date);
     setWeekStart(getMonday(dateFromKey(savedEvent.date)));
     setView("Week");
-    setDialogOpen(false);
+    setScreen("planner");
+    setEditingEventId(null);
+    setDeleteConfirmationOpen(false);
   }
 
-  function closeDialogOnBackdrop(event: MouseEvent<HTMLDialogElement>) {
-    if (event.target === event.currentTarget) setDialogOpen(false);
+  function cancelTaskForm() {
+    setScreen("planner");
+    setEditingEventId(null);
+    setDeleteConfirmationOpen(false);
+  }
+
+  function deleteSelectedEvent() {
+    if (!editingEventId) return;
+    setEvents((currentEvents) =>
+      currentEvents.filter((event) => event.id !== editingEventId),
+    );
+    setSelectedEventId(null);
+    setScreen("planner");
+    setEditingEventId(null);
+    setDeleteConfirmationOpen(false);
+  }
+
+  function updateDraft<Key extends keyof PlannerDraft>(
+    key: Key,
+    value: PlannerDraft[Key],
+  ) {
+    setDraft((currentDraft) => ({ ...currentDraft, [key]: value }));
   }
 
   return (
-    <section aria-label="Visual planner" className="visual-planner">
+    <section
+      aria-label="Visual planner"
+      className={`visual-planner${screen !== "planner" ? " visual-planner--form" : ""}${screen === "edit" ? " visual-planner--edit" : ""}`}
+    >
+      {screen === "planner" ? (
+        <>
       <header className="planner-header">
         <div className="planner-header__intro">
           <div className="planner-header__title">
@@ -355,7 +404,7 @@ function VisualPlanner() {
         </div>
         <button
           className="planner-add-button"
-          onClick={openNewEventDialog}
+          onClick={openNewEventPage}
           type="button"
         >
           <img alt="" src="/assets/planner-add.svg" />
@@ -389,7 +438,7 @@ function VisualPlanner() {
               <li>{formatEventDate(selectedEvent)}</li>
               <li>
                 {selectedEvent.status} ·{" "}
-                {selectedEvent.status === "Completed"
+                {selectedEvent.status === "Done"
                   ? "Nice work getting this done."
                   : "Make space for focused work"}
               </li>
@@ -397,7 +446,7 @@ function VisualPlanner() {
             <button
               aria-label={`Edit ${selectedEvent.title}`}
               className="planner-edit-button"
-              onClick={openEditEventDialog}
+              onClick={openEditEventPage}
               type="button"
             >
               <img alt="" src="/assets/planner-edit.svg" />
@@ -568,59 +617,178 @@ function VisualPlanner() {
           <span>Your week, at a glance.</span>
         </footer>
       </section>
-
-      {dialogOpen && (
-        <dialog
-          aria-labelledby="planner-dialog-title"
-          className="planner-dialog"
-          onClick={closeDialogOnBackdrop}
-          onCancel={(event) => {
-            event.preventDefault();
-            setDialogOpen(false);
-          }}
-          ref={taskDialog}
-        >
-          <form className="planner-dialog__form" onSubmit={saveEvent}>
-            <div className="planner-dialog__heading">
-              <div>
-                <h2 id="planner-dialog-title">
-                  {editingEventId ? "Edit task" : "Add a new task"}
-                </h2>
-                <p>Give this time a purpose that matters to you.</p>
+        </>
+      ) : screen === "add" ? (
+        <div className="planner-create-page">
+          <button
+            className="planner-back-link"
+            onClick={cancelTaskForm}
+            type="button"
+          >
+            <span aria-hidden="true">←</span> Weekly planner
+          </button>
+          <div className="planner-create-page__body">
+            <form
+              aria-labelledby="planner-create-title"
+              className="planner-create-card"
+              onSubmit={saveEvent}
+            >
+              <header className="planner-create-card__heading">
+                <div className="planner-create-card__identity">
+                  <span aria-hidden="true">+</span>
+                  <h1 id="planner-create-title">Add Task</h1>
+                </div>
+                <p>A little structure. A little room to breathe.</p>
+              </header>
+              <div className="planner-create-card__fields">
+                <label className="planner-create-field planner-create-field--row">
+                  <span>Name</span>
+                  <input
+                    autoFocus
+                    onChange={(event) => updateDraft("title", event.target.value)}
+                    placeholder="AI project"
+                    required
+                    value={draft.title}
+                  />
+                </label>
+                <label className="planner-create-field planner-create-field--row">
+                  <span>Due Date</span>
+                  <input
+                    onChange={(event) => updateDraft("date", event.target.value)}
+                    required
+                    type="date"
+                    value={draft.date}
+                  />
+                </label>
+                <label className="planner-create-field planner-create-field--row">
+                  <span>Task Type</span>
+                  <select
+                    onChange={(event) =>
+                      updateDraft("taskType", event.target.value as PlannerTaskType)
+                    }
+                    value={draft.taskType}
+                  >
+                    {taskTypes.map((taskType) => (
+                      <option key={taskType} value={taskType}>
+                        {taskType}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <fieldset className="planner-create-field planner-create-field--stacked">
+                  <legend>Goal Size</legend>
+                  <div className="planner-segmented-control">
+                    {goalSizes.map((goalSize) => (
+                      <button
+                        aria-pressed={draft.goalSize === goalSize}
+                        className={draft.goalSize === goalSize ? "is-selected" : ""}
+                        key={goalSize}
+                        onClick={() => updateDraft("goalSize", goalSize)}
+                        type="button"
+                      >
+                        {goalSize}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset className="planner-create-field planner-create-field--stacked">
+                  <legend>Connection</legend>
+                  <div className="planner-segmented-control">
+                    <button
+                      aria-pressed={draft.linkedEventId !== null}
+                      className={draft.linkedEventId !== null ? "is-selected" : ""}
+                      onClick={() =>
+                        updateDraft(
+                          "linkedEventId",
+                          draft.linkedEventId ?? selectedEvent?.id ?? events[0]?.id ?? null,
+                        )
+                      }
+                      type="button"
+                    >
+                      Connect to:
+                    </button>
+                    <button
+                      aria-pressed={draft.linkedEventId === null}
+                      className={draft.linkedEventId === null ? "is-selected" : ""}
+                      onClick={() => updateDraft("linkedEventId", null)}
+                      type="button"
+                    >
+                      No connection
+                    </button>
+                  </div>
+                </fieldset>
+                {draft.linkedEventId !== null && (
+                  <label className="planner-create-field planner-create-field--row">
+                    <span>Linked Task</span>
+                    <select
+                      onChange={(event) =>
+                        updateDraft("linkedEventId", event.target.value || null)
+                      }
+                      value={draft.linkedEventId ?? ""}
+                    >
+                      {events.map((plannerEvent) => (
+                        <option key={plannerEvent.id} value={plannerEvent.id}>
+                          {plannerEvent.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
+              <footer className="planner-create-card__actions">
+                <button
+                  className="planner-create-card__cancel"
+                  onClick={cancelTaskForm}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button className="planner-create-card__submit" type="submit">
+                  <img alt="" src="/assets/planner-add.svg" /> Add task
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      ) : (
+        <form className="planner-edit-page" onSubmit={saveEvent}>
+          <header className="planner-edit-page__header">
+            <div>
+              <h1>
+                <img alt="" src="/assets/planner-edit.svg" /> Edit Task
+              </h1>
+              <p>Make changes and save when you&apos;re ready.</p>
+            </div>
+            <div className="planner-edit-page__top-actions">
               <button
-                aria-label="Close dialog"
-                className="planner-dialog__close"
-                onClick={() => setDialogOpen(false)}
+                className="planner-edit-page__cancel"
+                onClick={cancelTaskForm}
                 type="button"
               >
-                ×
+                × Cancel
+              </button>
+              <button className="planner-edit-page__save" type="submit">
+                ✓ Save changes
               </button>
             </div>
-            <label className="planner-dialog__field">
-              Task name
-              <input
-                autoFocus
-                onChange={(event) =>
-                  setDraft((currentDraft) => ({
-                    ...currentDraft,
-                    title: event.target.value,
-                  }))
-                }
-                placeholder="e.g. Plan the week"
-                required
-                value={draft.title}
-              />
-            </label>
-            <div className="planner-dialog__row">
-              <label className="planner-dialog__field">
-                Category
+          </header>
+          <div className="planner-edit-page__details">
+            <section className="planner-edit-page__left">
+              <label className="planner-edit-field">
+                <span>Task Title</span>
+                <input
+                  autoFocus
+                  onChange={(event) => updateDraft("title", event.target.value)}
+                  required
+                  value={draft.title}
+                />
+              </label>
+              <div className="planner-edit-field">
+                <label htmlFor="planner-edit-category">Category</label>
                 <select
+                  id="planner-edit-category"
                   onChange={(event) =>
-                    setDraft((currentDraft) => ({
-                      ...currentDraft,
-                      category: event.target.value as PlannerCategory,
-                    }))
+                    updateDraft("category", event.target.value as PlannerCategory)
                   }
                   value={draft.category}
                 >
@@ -630,109 +798,189 @@ function VisualPlanner() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="planner-dialog__field">
-                Status
-                <select
-                  onChange={(event) =>
-                    setDraft((currentDraft) => ({
-                      ...currentDraft,
-                      status: event.target.value as PlannerStatus,
-                    }))
-                  }
-                  value={draft.status}
-                >
-                  {plannerStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
+                <div className="planner-category-chips">
+                  {plannerCategories.map((category) => (
+                    <button
+                      aria-pressed={draft.category === category}
+                      className={`planner-category-chip planner-category-chip--${categoryClass(category)}${draft.category === category ? " is-selected" : ""}`}
+                      key={category}
+                      onClick={() => updateDraft("category", category)}
+                      type="button"
+                    >
+                      <i className={`planner-category-dot planner-category-dot--${categoryClass(category)}`} />
+                      {category}
+                      {draft.category === category && <span aria-hidden="true">✓</span>}
+                    </button>
                   ))}
-                </select>
-              </label>
-            </div>
-            <div className="planner-dialog__row">
-              <label className="planner-dialog__field">
-                Date
+                </div>
+              </div>
+              <fieldset className="planner-edit-field">
+                <legend>Status</legend>
+                <div className="planner-status-chips">
+                  {plannerStatuses.map((status) => (
+                    <button
+                      aria-pressed={draft.status === status}
+                      className={draft.status === status ? "is-selected" : ""}
+                      key={status}
+                      onClick={() => updateDraft("status", status)}
+                      type="button"
+                    >
+                      <span aria-hidden="true">
+                        {status === "Done" ? "✓" : status === "In progress" ? "◌" : "○"}
+                      </span>
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            </section>
+
+            <section className="planner-edit-page__right">
+              <label className="planner-edit-field">
+                <span>Date</span>
                 <input
-                  onChange={(event) =>
-                    setDraft((currentDraft) => ({
-                      ...currentDraft,
-                      date: event.target.value,
-                    }))
-                  }
+                  onChange={(event) => updateDraft("date", event.target.value)}
                   required
                   type="date"
                   value={draft.date}
                 />
               </label>
-              <label className="planner-dialog__field">
-                Start time
-                <select
-                  onChange={(event) =>
-                    setDraft((currentDraft) => ({
-                      ...currentDraft,
-                      startHour: Number(event.target.value),
-                    }))
-                  }
-                  value={draft.startHour}
-                >
-                  {timeSlots.map((slot) => (
-                    <option key={slot.hour} value={slot.hour}>
-                      {formatTime(slot.hour)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="planner-dialog__row">
-              <label className="planner-dialog__field">
-                Duration
-                <select
-                  onChange={(event) =>
-                    setDraft((currentDraft) => ({
-                      ...currentDraft,
-                      duration: Number(event.target.value),
-                    }))
-                  }
-                  value={draft.duration}
-                >
-                  {[1, 2, 3, 4].map((duration) => (
-                    <option key={duration} value={duration}>
-                      {formatDuration(duration)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <span aria-hidden="true" />
-            </div>
-            <label className="planner-dialog__field">
-              Description
+              <div className="planner-edit-field">
+                <span>Time</span>
+                <div className="planner-edit-time">
+                  <label>
+                    <span className="visually-hidden">Start time</span>
+                    <select
+                      onChange={(event) => {
+                        const startHour = Number(event.target.value);
+                        updateDraft("startHour", startHour);
+                        if (startHour + draft.duration > 24) {
+                          updateDraft("duration", 24 - startHour);
+                        }
+                      }}
+                      value={draft.startHour}
+                    >
+                      {Array.from({ length: 24 }, (_, hour) => (
+                        <option key={hour} value={hour}>{formatTime(hour)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <span>to</span>
+                  <label>
+                    <span className="visually-hidden">End time</span>
+                    <select
+                      onChange={(event) =>
+                        updateDraft(
+                          "duration",
+                          Number(event.target.value) - draft.startHour,
+                        )
+                      }
+                      value={draft.startHour + draft.duration}
+                    >
+                      {Array.from(
+                        { length: 24 - draft.startHour },
+                        (_, index) => draft.startHour + index + 1,
+                      ).map((endHour) => (
+                        <option key={endHour} value={endHour}>
+                          {endHour === 24 ? "12:00 AM" : formatTime(endHour)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <small>Duration: {formatDuration(draft.duration)}</small>
+              </div>
+              <div className="planner-edit-field">
+                <span>Week context</span>
+                <div className="planner-week-context">
+                  {Array.from({ length: 7 }, (_, index) => {
+                    const date = addDays(getMonday(dateFromKey(draft.date)), index);
+                    const isSelected = toDateKey(date) === draft.date;
+                    return (
+                      <div className="planner-week-context__day" key={toDateKey(date)}>
+                        <span>
+                          {new Intl.DateTimeFormat("en-US", { weekday: "short" })
+                            .format(date)
+                            .replace(".", "")}
+                        </span>
+                        <span className={isSelected ? "is-selected" : ""}>
+                          {date.getDate()}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="planner-edit-page__notes">
+            <label className="planner-edit-field">
+              <span>Description</span>
               <textarea
-                onChange={(event) =>
-                  setDraft((currentDraft) => ({
-                    ...currentDraft,
-                    description: event.target.value,
-                  }))
-                }
-                placeholder="Add a few details..."
-                rows={3}
+                onChange={(event) => updateDraft("description", event.target.value)}
                 value={draft.description}
               />
             </label>
-            <div className="planner-dialog__actions">
+            <label className="planner-edit-field">
+              <span>Additional Notes</span>
+              <textarea
+                onChange={(event) => updateDraft("notes", event.target.value)}
+                value={draft.notes}
+              />
+            </label>
+          </div>
+
+          <footer className="planner-edit-page__footer">
+            <span className={`planner-category-chip planner-category-chip--${categoryClass(draft.category)}`}>
+              <i className={`planner-category-dot planner-category-dot--${categoryClass(draft.category)}`} />
+              {draft.category} · {draft.title || "Untitled task"}
+            </span>
+            <div>
               <button
-                className="planner-dialog__cancel"
-                onClick={() => setDialogOpen(false)}
+                className="planner-edit-page__cancel"
+                onClick={cancelTaskForm}
                 type="button"
               >
-                Cancel
+                × Cancel
               </button>
-              <button className="planner-dialog__save" type="submit">
-                {editingEventId ? "Save changes" : "Add task"}
+              <button className="planner-edit-page__save" type="submit">
+                ✓ Save changes
               </button>
             </div>
-          </form>
-        </dialog>
+          </footer>
+
+          <section aria-label="Danger zone" className="planner-danger-zone">
+            <h2>Danger zone</h2>
+            {deleteConfirmationOpen ? (
+              <div className="planner-danger-zone__confirm" role="alert">
+                <p>Delete this task? This can&apos;t be undone.</p>
+                <button
+                  className="planner-danger-zone__cancel"
+                  onClick={() => setDeleteConfirmationOpen(false)}
+                  type="button"
+                >
+                  Keep task
+                </button>
+                <button
+                  className="planner-danger-zone__delete"
+                  onClick={deleteSelectedEvent}
+                  type="button"
+                >
+                  Delete task
+                </button>
+              </div>
+            ) : (
+              <button
+                className="planner-danger-zone__button"
+                onClick={() => setDeleteConfirmationOpen(true)}
+                type="button"
+              >
+                <span aria-hidden="true">⌫</span> Delete this task
+              </button>
+            )}
+          </section>
+        </form>
       )}
     </section>
   );
@@ -747,6 +995,10 @@ function createEmptyDraft(date = toDateKey(initialWeekStart)): PlannerDraft {
     duration: 1,
     description: "",
     status: "Not started",
+    taskType: "Project",
+    goalSize: "Medium",
+    linkedEventId: "project-planning",
+    notes: "",
   };
 }
 
