@@ -374,3 +374,29 @@
     grid-template-columns: 1fr;
   }
 }
+
+.breakdown-goal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.breakdown-goal-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e7e0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.breakdown-goal-priority {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #edf1e9;
+}
