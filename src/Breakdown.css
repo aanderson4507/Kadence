@@ -432,3 +432,125 @@
     line-height: 21px;
   }
 }
+
+/* Weekly Review */
+
+.weekly-review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 20px;
+}
+
+.weekly-review-column {
+  min-width: 0;
+}
+
+.weekly-review-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.weekly-review-task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #f8f9f7;
+}
+
+.weekly-review-task > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.weekly-review-task strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.weekly-review-task > div > span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.weekly-review-tag {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.weekly-review-tag--completed {
+  color: #34754c;
+  background: #e5f2e8;
+}
+
+.weekly-review-tag--pending {
+  color: #98702c;
+  background: #fff3d9;
+}
+
+.weekly-review-tag--overdue {
+  color: #b44343;
+  background: #fde9e9;
+}
+
+.weekly-review-empty {
+  margin: 0;
+  padding: 16px 10px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.weekly-review-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weekly-review-progress__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.weekly-review-progress__labels strong {
+  font-weight: 600;
+}
+
+.weekly-review-progress__track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #e9ece8;
+}
+
+.weekly-review-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-brand);
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 900px) {
+  .weekly-review-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .weekly-review-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
