@@ -18,9 +18,12 @@ export type Task = {
   category: string;
   priority: Priority;
   completed: boolean;
+  dueDate?: string;
+  completedDate?: string;
 };
 
 export const initialTasks: Task[] = [
+  
   {
     id: "calc-review",
     title: "Complete Test Review for Calc.",
@@ -65,6 +68,16 @@ export const initialTasks: Task[] = [
   },
 ];
 
+function getTodayDateString() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 const taskStatuses: TaskStatus[] = ["All tasks", "Active", "Completed"];
 const priorities: Priority[] = ["Very High", "High", "Medium", "Low", "Very Low", "None"];
 
@@ -82,6 +95,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
   );
   const [showCompleted, setShowCompleted] = useState(true);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
   const [openTaskMenu, setOpenTaskMenu] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const quickAddInput = useRef<HTMLInputElement>(null);
@@ -126,11 +140,13 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
       category: "General",
       priority: priorityFilter,
       completed: false,
+      ...(newTaskDueDate && { dueDate: newTaskDueDate }),
     };
     setTasks((currentTasks) => [...currentTasks, task]);
     setTaskStatus("All tasks");
     setShowCompleted(true);
     setNewTaskTitle("");
+    setNewTaskDueDate("");
     setAnnouncement(`Added task: ${title}`);
   }
 
@@ -140,9 +156,18 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
 
     setTasks((currentTasks) =>
       currentTasks.map((item) =>
-        item.id === taskId ? { ...item, completed: !item.completed } : item,
+        item.id === taskId
+          ? {
+              ...item,
+              completed: !item.completed,
+              completedDate: !item.completed
+                ? getTodayDateString()
+                : undefined,
+            }
+          : item,
       ),
     );
+
     setAnnouncement(
       `${task.completed ? "Reopened" : "Completed"} task: ${task.title}`,
     );
@@ -372,6 +397,12 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
               <div className="todo-task-details">
                 <span className="todo-task-title">{task.title}</span>
                 <span className="todo-task-category">{task.category}</span>
+                {task.dueDate && (
+                  <span className="todo-task-due-date">
+                  Due {new Date(`${task.dueDate}T00:00:00`).toLocaleDateString()}
+                  </span>
+                )}
+              
               </div>
 
               <div className="todo-task-priority">
@@ -437,6 +468,12 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
             }
             ref={quickAddInput}
             value={newTaskTitle}
+          />
+          <input
+            aria-label="Task due date"
+            onChange={(event) => setNewTaskDueDate(event.target.value)}
+            type="date"
+            value={newTaskDueDate}
           />
           <button aria-label="Add task" type="submit">
             ↵

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import "./App.css";
 import Breakdown from "./Breakdown";
 import Goals from "./Goals";
@@ -41,6 +41,51 @@ function Dashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenu, setOpenMenu] = useState<UtilityMenu>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [showWeeklyReviewReminder, setShowWeeklyReviewReminder] =
+  useState(false);
+
+useEffect(() => {
+  const today = new Date();
+
+  // Sunday is the weekly review reminder day.
+  if (today.getDay() !== 0) return;
+
+  const weekStart = new Date(today);
+  weekStart.setHours(0, 0, 0, 0);
+
+  // Calculate Monday of the current week.
+  weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+
+  const weekKey = [
+    weekStart.getFullYear(),
+    String(weekStart.getMonth() + 1).padStart(2, "0"),
+    String(weekStart.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const storageKey = `kadence-weekly-review-${weekKey}`;
+
+  // Show the reminder only once during the current week.
+  if (localStorage.getItem(storageKey) !== "shown") {
+    localStorage.setItem(storageKey, "shown");
+    setShowWeeklyReviewReminder(true);
+    setOpenMenu("notifications");
+  }
+}, []);
+
+  const upcomingReminders = tasks.filter((task) => {
+  if (task.completed || !task.dueDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(`${task.dueDate}T00:00:00`);
+
+  const daysUntilDue = Math.ceil(
+    (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return daysUntilDue >= 0 && daysUntilDue <= 7;
+});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [goalsForExport, setGoalsForExport] = useState<unknown[]>([]);
   const [plannerEventsForExport, setPlannerEventsForExport] = useState<unknown[]>([]);
@@ -190,6 +235,9 @@ function Dashboard({
             label="Notifications"
             onClick={() => toggleMenu("notifications")}
             src="/assets/notifications.svg"
+            badgeCount={
+              upcomingReminders.length + (showWeeklyReviewReminder ? 1 : 0)
+            }
           />
           <UtilityButton
             active={settingsOpen}
@@ -215,7 +263,50 @@ function Dashboard({
             {openMenu === "notifications" && (
               <>
                 <strong>Notifications</strong>
-                <span>You&apos;re all caught up.</span>
+
+                {showWeeklyReviewReminder && (
+                  <div className="notification-item">
+                    <strong>Weekly Review</strong>
+
+                    <span>
+                      It's time to review your progress and see what you accomplished this week!
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveView("Breakdown");
+                        setOpenMenu(null);
+                      }}
+                    >
+                      Open Weekly Review
+                    </button>
+                  </div>
+                )}
+
+                {upcomingReminders.length === 0 ? (
+                  <span>No upcoming assignment reminders.</span>
+                ) : (
+                  <div className="notification-list">
+                    {upcomingReminders.map((task) => (
+                      <div className="notification-item" key={task.id}>
+                        <strong>{task.title}</strong>
+
+                        <span>
+                          Due{" "}
+                          {new Date(`${task.dueDate}T00:00:00`).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {openMenu === "settings" && (
+              <>
+                <strong>Settings</strong>
+                <span>Settings will be available here.</span>
               </>
             )}
             {openMenu === "profile" && (
@@ -274,6 +365,8 @@ function Dashboard({
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "To do"}>
         <TodoList tasks={tasks} setTasks={setTasks} />
       </div>
+      <div className="dashboard-content" hidden={activeView !== "Breakdown"}>
+        <Breakdown tasks={tasks} />
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "Breakdown"}>
         <Breakdown />
       </div>
@@ -341,9 +434,10 @@ type UtilityButtonProps = {
   label: string;
   onClick: () => void;
   src: string;
+  badgeCount?: number;
 };
 
-function UtilityButton({ active, label, onClick, src }: UtilityButtonProps) {
+function UtilityButton({ active, label, onClick, src, badgeCount }: UtilityButtonProps) {
   return (
     <div className="utility-control">
       <button
@@ -354,6 +448,11 @@ function UtilityButton({ active, label, onClick, src }: UtilityButtonProps) {
         type="button"
       >
         <img src={src} alt="" />
+        {badgeCount !== undefined && badgeCount > 0 && (
+          <span className="notification-badge">
+            {badgeCount}
+          </span>
+        )}
       </button>
     </div>
   );
