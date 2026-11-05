@@ -13,7 +13,6 @@ type View = {
 };
 
 const initialViews: View[] = [
-  { label: "Calendar", icon: "/assets/tab-calendar.svg" },
   { label: "Goals", icon: "/assets/tab-goals-todo.svg" },
   { label: "To do", icon: "/assets/tab-todo-selected.svg" },
   { label: "Breakdown", icon: "/assets/tab-breakdown-todo.svg" },
@@ -319,7 +318,7 @@ function Dashboard({
           <h1>Welcome to Kadence!</h1>
           <div className="welcome-instructions">
             <p>To start setting goals, please click on the &quot;Goals&quot; tab</p>
-            <p>To view your calendar, please click on the &quot;Visual Planner&quot; tab</p>
+            <p>To view your schedule, please click on the &quot;Visual Planner&quot; tab</p>
             <p>
               To set or change the priority of your goals, please click on the
               &quot;Priority&quot; tab
