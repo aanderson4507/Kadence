@@ -13,6 +13,65 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace-panels {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace-panels--resizable {
+  overflow: auto;
+}
+
+.workspace-panels--resizable .workspace-panel-grid {
+  flex: 0 0 auto;
+}
+
+.workspace-panel-grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.dashboard-content--split {
+  min-width: 320px;
+  overflow: auto;
+  container-name: workspace-panel;
+  container-type: inline-size;
+}
+
+.workspace-panels--resizable .dashboard-content--split {
+  border-right: 1px solid var(--color-border);
+}
+
+.workspace-panel-resizer {
+  display: grid;
+  min-width: 12px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.workspace-panel-resizer::after {
+  width: 2px;
+  height: 48px;
+  border-radius: 2px;
+  background: var(--color-border);
+  content: "";
+}
+
+.workspace-panel-resizer:hover::after,
+.workspace-panel-resizer:focus-visible::after {
+  background: var(--color-brand);
 }
 
 .app-shell [hidden] {
@@ -221,6 +280,24 @@
   background: var(--color-brand-soft);
 }
 
+.workspace-layout-toggle {
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-brand);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.workspace-layout-toggle:hover {
+  background: var(--color-brand-soft);
+}
+
 .tab-empty-message {
   align-self: center;
   color: var(--color-muted);
@@ -356,4 +433,143 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+@container workspace-panel (max-width: 600px) {
+  .dashboard-content--split .todo-workspace,
+  .dashboard-content--split .priority-setter {
+    gap: 24px;
+    padding: 28px 20px 48px;
+  }
+
+  .dashboard-content--split .todo-page-heading,
+  .dashboard-content--split .planner-header,
+  .dashboard-content--split .goals-main__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-content--split .todo-card-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-content--split .todo-list-filters {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 12px 16px;
+  }
+
+  .dashboard-content--split .todo-column-labels {
+    grid-template-columns: minmax(0, 1fr) 80px 28px;
+    gap: 8px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .dashboard-content--split .todo-task {
+    grid-template-columns: 20px minmax(80px, 1fr) 80px 28px;
+    gap: 8px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .dashboard-content--split .todo-status-tabs {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .dashboard-content--split .todo-quick-add {
+    padding: 0 16px;
+  }
+
+  .dashboard-content--split .breakdown-page,
+  .dashboard-content--split .visual-planner {
+    padding: 24px 20px;
+  }
+
+  .dashboard-content--split .breakdown-progress {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dashboard-content--split .breakdown-gauge {
+    width: 160px;
+    height: 160px;
+    flex-basis: 160px;
+  }
+
+  .dashboard-content--split .visual-planner {
+    gap: 24px;
+  }
+
+  .dashboard-content--split .planner-task-info {
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .dashboard-content--split .planner-task-info__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dashboard-content--split .planner-task-info__content {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 12px;
+  }
+
+  .dashboard-content--split .planner-task-info__details {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .dashboard-content--split .planner-calendar__toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .dashboard-content--split .planner-week-navigation,
+  .dashboard-content--split .planner-calendar__tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-content--split .priority-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-content--split .priority-task-selection {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .dashboard-content--split .goals-main {
+    padding: 24px 16px 20px;
+  }
+
+  .dashboard-content--split .goals-sidebar {
+    width: 150px;
+    flex-basis: 150px;
+    padding: 24px 8px;
+  }
+
+  .dashboard-content--split .goals-sidebar__item {
+    gap: 8px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+
+  .dashboard-content--split .goals-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-content--split .goals-main__actions {
+    flex-wrap: wrap;
+  }
 }
