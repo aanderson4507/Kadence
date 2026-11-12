@@ -1,7 +1,7 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import "./App.css";
 import Breakdown from "./Breakdown";
-import Goals from "./Goals";
+import Goals, { type Goal } from "./Goals";
 import PrioritySetter from "./PrioritySetter";
 import Settings from "./Settings";
 import TodoList, { initialTasks, type Task } from "./TodoList";
@@ -87,7 +87,7 @@ useEffect(() => {
   return daysUntilDue >= 0 && daysUntilDue <= 7;
 });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [goalsForExport, setGoalsForExport] = useState<unknown[]>([]);
+  const [goalsForExport, setGoalsForExport] = useState<Goal[]>([]);
   const [plannerEventsForExport, setPlannerEventsForExport] = useState<unknown[]>([]);
 
   const visibleViews = views.filter((view) =>
@@ -360,7 +360,7 @@ useEffect(() => {
         <TodoList tasks={tasks} setTasks={setTasks} />
       </div>
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "Breakdown"}>
-        <Breakdown tasks={tasks} />
+        <Breakdown tasks={tasks} goals={goalsForExport} />
       </div>
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "Goals"}>
         <Goals

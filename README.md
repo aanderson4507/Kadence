@@ -14,6 +14,21 @@ npm install
 npm run dev
 ```
 
+## Database and API
+
+Kadence stores data in PostgreSQL 17 through Prisma, served by a small Express API in `server/`.
+Full setup (local and shared cloud database) is in [docs/database.md](docs/database.md).
+
+```sh
+cp .env.example .env   # then set your local PostgreSQL password
+npm run db:migrate     # create the database and apply migrations
+npm run db:seed        # load development data (demo / kadence-demo)
+npm run db:check       # verify the connection
+npm run dev:api        # API on http://localhost:3001 (Vite proxies /api)
+```
+
+The React screens still use in-memory sample data; connecting them to the API is the next step.
+
 ## Production build
 
 ```sh

@@ -13,7 +13,7 @@ type GoalCategory = "Big goals" | "Medium goals" | "Small goals";
 type GoalFilter = "All goals" | GoalCategory;
 type MediumGoalDraft = { id: string; title: string };
 
-type Goal = {
+export type Goal = {
   id: string;
   category: GoalCategory;
   title: string;
@@ -121,7 +121,7 @@ const categories: {
 
 type GoalsProps = {
   activeView: string | null;
-  onDataChange: (goals: unknown[]) => void;
+  onDataChange: (goals: Goal[]) => void;
   onOpenBreakdown: () => void;
   onOpenSettings: () => void;
   onSelectView: (view: string | null) => void;
@@ -381,6 +381,13 @@ function Goals({
                       goal={goal}
                       key={goal.id}
                       onComplete={() => toggleGoal(goal.id)}
+                      onPriorityChange={(priority) => {
+                        setGoals((currentGoals) =>
+                          currentGoals.map((item) =>
+                            item.id === goal.id ? { ...item, priority } : item
+                          )
+                        );
+                      }}      
                     />
                   ))}
                   {categoryGoals.some((goal) => goal.spotlight) && (
@@ -557,9 +564,11 @@ function Goals({
 function GoalCard({
   goal,
   onComplete,
+  onPriorityChange,
 }: {
   goal: Goal;
   onComplete: () => void;
+  onPriorityChange: (priority: Priority) => void;
 }) {
   const progress = goal.completed ? 100 : goal.progress;
   const progressAsset = `/assets/goal-progress-${progress}.svg`;
@@ -585,7 +594,26 @@ function GoalCard({
       </button>
       <div className="goal-card__body">
         <h3>{goal.title}</h3>
+
+        <label className="goal-card__priority">
+          Priority
+          <select
+            value={goal.priority ?? "None"}
+            onChange={(event) =>
+              onPriorityChange(event.target.value as Priority)
+            }
+          >
+            <option value="Very High">Very High</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Very Low">Very Low</option>
+            <option value="None">None</option>
+          </select>
+        </label>
+
         <p>{goal.detail}</p>
+
         <div
             aria-label={`${progress}% complete`}
           className="goal-card__progress"
