@@ -29,6 +29,12 @@ npm run dev:api        # API on http://localhost:3001 (Vite proxies /api)
 
 The React screens still use in-memory sample data; connecting them to the API is the next step.
 
+## Tests
+
+```sh
+npm test               # runs server/**/*.test.ts and src/**/*.test.ts (no database needed)
+```
+
 ## Production build
 
 ```sh
@@ -66,11 +72,16 @@ type, goal size, and optional linked task; edit task details, status, schedule,
 description, and notes; or delete tasks with confirmation. Planner changes are
 kept in page state and reset on refresh.
 
-Open Settings from the workspace gear or the Goals sidebar to update profile,
-planner, reminder, goal, task carryover, weekly review, and privacy preferences.
-Settings changes stay in page state until saved, except privacy preferences,
-which apply immediately. Theme changes apply immediately as well. The header
-sun/moon button switches the app between light and dark themes; the selected
-theme is saved in this browser and applies across the login, workspace, and
-Settings pages. Data export downloads the current preferences, tasks, goals,
+Open Settings from the workspace gear or the Goals sidebar. It opens to an
+Overview with your account details and the preferences changed most often
+(theme, accent color, planner view, landing page, default goal priority, and
+key reminders), plus links to every other section: profile, planner, reminders,
+goals, task carryover, weekly review, and privacy. Settings are loaded from and
+saved to the database through `GET`/`PATCH /api/users/:userId/settings`, so the
+API (`npm run dev:api`) must be running. Edits on any section are saved together
+with one **Save changes** click; invalid input or a failed save shows the reason
+and keeps your edits so you can try again. Theme changes apply and save right
+away, including from the header sun/moon button. Until authentication exists,
+Settings uses the seeded demo account. Profile picture uploads are a preview
+only and are not saved yet. Data export downloads the current preferences, tasks, goals,
 and planner events as JSON. Account deletion is for review only in this demo.

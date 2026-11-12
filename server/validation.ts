@@ -6,6 +6,10 @@ export class ValidationError extends Error {
   readonly status = 400;
 }
 
+export class ConflictError extends Error {
+  readonly status = 409;
+}
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

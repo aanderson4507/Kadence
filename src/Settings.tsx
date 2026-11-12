@@ -1,12 +1,29 @@
 import {
   useEffect,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import "./Settings.css";
+import {
+  DEFAULT_SETTINGS,
+  REMINDER_LABELS,
+  SUMMARY_LABELS,
+  WEEKDAYS,
+  loadSettings,
+  sameSettings,
+  saveSettings,
+  saveThemePreference,
+  validateSettings,
+  type AccountInfo,
+  type ReminderLabel,
+  type SettingsValues,
+  type ThemePreference,
+} from "./settingsApi";
 
 type SettingsSection =
+  | "overview"
   | "profile"
   | "planner"
   | "notifications"
@@ -15,154 +32,8 @@ type SettingsSection =
   | "weekly"
   | "privacy";
 
-type SettingsValues = {
-  profile: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    school: string;
-    major: string;
-    graduationDate: string;
-    careerInterests: string;
-    careerGoals: string;
-    avatar: string | null;
-  };
-  planner: {
-    theme: "Light mode" | "Dark mode" | "System default";
-    accent: string;
-    view: "Daily" | "Weekly" | "Monthly";
-    startWeek: string;
-    timeFormat: "12-hour clock" | "24-hour clock";
-    landingPage: "Dashboard" | "Planner" | "Goals";
-  };
-  notifications: {
-    reminders: Record<string, boolean>;
-    quietStart: string;
-    quietEnd: string;
-  };
-  goals: {
-    timeframe: "Daily" | "Weekly" | "Monthly" | "Yearly";
-    category: "Academic" | "Career" | "Personal development";
-    breakdown: "Major milestones" | "Daily" | "Weekly" | "Manual";
-    priority: "Low" | "Medium" | "High";
-    celebration: "Message" | "Animation" | "Turn off";
-    progress: "% complete" | "Tasks completed" | "Milestones completed" | "Time spent";
-  };
-  unfinished: {
-    behavior:
-      | "Ask me what to do"
-      | "Automatically move to the next day"
-      | "Keep on the original date"
-      | "Move to a task backlog for later scheduling";
-    reviewTime:
-      | "End of each day"
-      | "Start of the next day"
-      | "During my weekly review"
-      | "Never remind me";
-    deadline:
-      | "Automatically update the deadline when rescheduling"
-      | "Keep the original deadline visible"
-      | "Ask me to set a new deadline";
-    autoReschedule: boolean;
-    highPriorityOnly: boolean;
-    excludeOverdue: boolean;
-    dailyLimit: number;
-    warnOverload: boolean;
-    reprioritizeWhenFull: boolean;
-  };
-  weekly: {
-    reviewDay: string;
-    reminder: boolean;
-    reminderTime: string;
-    summary: string[];
-    reflectionQuestions: boolean;
-    missedGoal: "Keep" | "Reschedule" | "Revise" | "Archive";
-    visualization: "Charts" | "Progress bars" | "Percentages";
-  };
-  privacy: {
-    backup: "Automatic" | "Manual" | "Off";
-    deleteCompleted: boolean;
-  };
-};
-
-const initialSettings: SettingsValues = {
-  profile: {
-    firstName: "",
-    lastName: "",
-    email: "",
-    school: "",
-    major: "",
-    graduationDate: "",
-    careerInterests: "",
-    careerGoals: "",
-    avatar: null,
-  },
-  planner: {
-    theme: "Light mode",
-    accent: "#406b51",
-    view: "Daily",
-    startWeek: "Sunday",
-    timeFormat: "12-hour clock",
-    landingPage: "Dashboard",
-  },
-  notifications: {
-    reminders: {
-      "Daily planning reminder": true,
-      "Upcoming task reminders": true,
-      "Deadline notifications": true,
-      "Goal progress reminders": true,
-      "Weekly review reminder": true,
-      "Missed-goal notifications": true,
-    },
-    quietStart: "",
-    quietEnd: "",
-  },
-  goals: {
-    timeframe: "Daily",
-    category: "Academic",
-    breakdown: "Major milestones",
-    priority: "Medium",
-    celebration: "Message",
-    progress: "% complete",
-  },
-  unfinished: {
-    behavior: "Ask me what to do",
-    reviewTime: "Start of the next day",
-    deadline: "Keep the original deadline visible",
-    autoReschedule: false,
-    highPriorityOnly: false,
-    excludeOverdue: false,
-    dailyLimit: 3,
-    warnOverload: true,
-    reprioritizeWhenFull: true,
-  },
-  weekly: {
-    reviewDay: "Friday",
-    reminder: true,
-    reminderTime: "16:30",
-    summary: [
-      "Tasks completed",
-      "Goals completed",
-      "Milestones reached",
-      "Time spent",
-    ],
-    reflectionQuestions: true,
-    missedGoal: "Keep",
-    visualization: "Charts",
-  },
-  privacy: {
-    backup: "Automatic",
-    deleteCompleted: true,
-  },
-};
-
-type ThemePreference = SettingsValues["planner"]["theme"];
-
-function createInitialSettings(themePreference: ThemePreference): SettingsValues {
-  return {
-    ...initialSettings,
-    planner: { ...initialSettings.planner, theme: themePreference },
-  };
+function withTheme(values: SettingsValues, theme: ThemePreference): SettingsValues {
+  return { ...values, planner: { ...values.planner, theme } };
 }
 
 const sectionItems: {
@@ -171,13 +42,23 @@ const sectionItems: {
   icon: string;
   title: string;
   description: string;
+  summary: string;
 }[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    icon: "⌂",
+    title: "Settings overview",
+    description: "Your account at a glance and the preferences you change most. Save once to apply everything.",
+    summary: "Account and top preferences",
+  },
   {
     id: "profile",
     label: "Personal and career profile",
     icon: "◎",
     title: "Personal and career profile",
     description: "Update the details that shape your planner, career goals, and weekly reviews.",
+    summary: "Name, email, school, and career goals",
   },
   {
     id: "planner",
@@ -185,6 +66,7 @@ const sectionItems: {
     icon: "▦",
     title: "Planner appearance and layout",
     description: "Customize the look, layout, and defaults for your daily planner experience.",
+    summary: "Theme, colors, views, and time format",
   },
   {
     id: "notifications",
@@ -192,6 +74,7 @@ const sectionItems: {
     icon: "☷",
     title: "Notifications and reminders",
     description: "Control when Kadence sends planning reminders, task alerts, and progress updates.",
+    summary: "Reminders and Do Not Disturb hours",
   },
   {
     id: "goals",
@@ -199,6 +82,7 @@ const sectionItems: {
     icon: "□",
     title: "Goal-setting preferences",
     description: "Choose the defaults and tracking behaviors that help you set, structure, and celebrate goals.",
+    summary: "Defaults for new goals and progress tracking",
   },
   {
     id: "unfinished",
@@ -206,20 +90,23 @@ const sectionItems: {
     icon: "◉",
     title: "Unfinished task management",
     description: "Choose how Kadence handles incomplete tasks, reminders, deadlines, and daily carryover.",
+    summary: "Carryover, rescheduling, and daily limits",
   },
   {
     id: "weekly",
     label: "Weekly progress reviews",
     icon: "⚑",
     title: "Weekly progress reviews",
-    description: "Choose the defaults and tracking behaviors that help you set, structure, and celebrate goals.",
+    description: "Pick your review day, reminder, and what your weekly summary shows.",
+    summary: "Review day, reminder, and summary content",
   },
   {
     id: "privacy",
     label: "Privacy and account management",
     icon: "⚙",
     title: "Privacy and account management",
-    description: "Manage passwords, data exports, backups, completed task cleanup, and account access.",
+    description: "Manage data exports, backups, completed task cleanup, and account access.",
+    summary: "Export, backups, and account deletion",
   },
 ];
 
@@ -230,6 +117,9 @@ const accentOptions = [
   { value: "#b66d80", label: "Rose", icon: "/assets/settings-accent-rose.svg" },
   { value: "#c18b52", label: "Amber", icon: "/assets/settings-accent-amber.svg" },
 ];
+
+type Status = { kind: "info" | "success" | "error"; text: string } | null;
+type LoadState = { kind: "loading" } | { kind: "ready" } | { kind: "error"; message: string };
 
 type SettingsProps = {
   isDarkMode: boolean;
@@ -244,28 +134,58 @@ function Settings({
   onThemeChange,
   themePreference,
 }: SettingsProps) {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("profile");
+  const [activeSection, setActiveSection] = useState<SettingsSection>("overview");
   const [savedSettings, setSavedSettings] = useState(() =>
-    createInitialSettings(themePreference),
+    withTheme(DEFAULT_SETTINGS, themePreference),
   );
-  const [draft, setDraft] = useState(() =>
-    createInitialSettings(themePreference),
-  );
-  const [statusMessage, setStatusMessage] = useState("");
+  const [draft, setDraft] = useState(() => withTheme(DEFAULT_SETTINGS, themePreference));
+  const [userId, setUserId] = useState<string | null>(null);
+  const [account, setAccount] = useState<AccountInfo | null>(null);
+  const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<Status>(null);
   const [deleteReviewOpen, setDeleteReviewOpen] = useState(false);
+  /** The theme the server has stored, so header theme switches are saved only when they differ. */
+  const serverTheme = useRef<ThemePreference | null>(null);
 
   const activeSectionInfo = sectionItems.find((item) => item.id === activeSection)!;
+  const hasUnsavedChanges = !sameSettings(draft, savedSettings);
+  const canSave = userId !== null && hasUnsavedChanges && !saving;
+
+  async function fetchSettings() {
+    setLoadState({ kind: "loading" });
+    try {
+      const loaded = await loadSettings();
+      serverTheme.current = loaded.values.planner.theme;
+      setUserId(loaded.userId);
+      setAccount(loaded.account);
+      setSavedSettings(loaded.values);
+      setDraft(loaded.values);
+      setLoadState({ kind: "ready" });
+      onThemeChange(loaded.values.planner.theme);
+    } catch (error) {
+      setLoadState({ kind: "error", message: errorMessage(error) });
+    }
+  }
 
   useEffect(() => {
-    setSavedSettings((current) => ({
-      ...current,
-      planner: { ...current.planner, theme: themePreference },
-    }));
-    setDraft((current) => ({
-      ...current,
-      planner: { ...current.planner, theme: themePreference },
-    }));
-  }, [themePreference]);
+    // Load once when the workspace opens; Retry calls fetchSettings again.
+    void fetchSettings();
+  }, []);
+
+  // The theme applies and saves right away, whether it is changed here or from the header.
+  useEffect(() => {
+    setSavedSettings((current) => withTheme(current, themePreference));
+    setDraft((current) => withTheme(current, themePreference));
+    if (!userId || serverTheme.current === null || serverTheme.current === themePreference) return;
+
+    const previousTheme = serverTheme.current;
+    serverTheme.current = themePreference;
+    saveThemePreference(userId, themePreference).catch((error) => {
+      serverTheme.current = previousTheme;
+      setStatus({ kind: "error", text: errorMessage(error) });
+    });
+  }, [themePreference, userId]);
 
   function updateSetting<
     Section extends keyof SettingsValues,
@@ -275,22 +195,42 @@ function Settings({
       ...current,
       [section]: { ...current[section], [property]: value },
     }));
-    setStatusMessage("");
+    setStatus(null);
   }
 
-  function saveSettings() {
-    setSavedSettings(draft);
-    setStatusMessage("Changes saved.");
+  async function handleSave() {
+    if (!userId || saving) return;
+    const problem = validateSettings(draft);
+    if (problem) {
+      setStatus({ kind: "error", text: problem });
+      return;
+    }
+
+    const submitted = draft;
+    setSaving(true);
+    setStatus({ kind: "info", text: "Saving your changes…" });
+    try {
+      const stored = await saveSettings(userId, submitted);
+      setSavedSettings(stored);
+      // Keep anything typed while the save was in flight.
+      setDraft((current) => (current === submitted ? stored : current));
+      setStatus({ kind: "success", text: "Changes saved." });
+    } catch (error) {
+      // The draft is kept so nothing is lost; Save stays available to try again.
+      setStatus({ kind: "error", text: errorMessage(error) });
+    } finally {
+      setSaving(false);
+    }
   }
 
   function discardSettings() {
     setDraft(savedSettings);
-    setStatusMessage("Unsaved changes discarded.");
+    setStatus({ kind: "info", text: "Unsaved changes discarded." });
   }
 
   function downloadSettingsData() {
     onExport(savedSettings);
-    setStatusMessage("Your data export is ready.");
+    setStatus({ kind: "success", text: "Your data export is ready." });
   }
 
   function updateProfilePicture(file: File | undefined) {
@@ -304,30 +244,48 @@ function Settings({
     reader.readAsDataURL(file);
   }
 
-  function updatePrivacySetting<
-    Property extends keyof SettingsValues["privacy"],
-  >(property: Property, value: SettingsValues["privacy"][Property]) {
-    setDraft((current) => ({
-      ...current,
-      privacy: { ...current.privacy, [property]: value },
-    }));
-    setSavedSettings((current) => ({
-      ...current,
-      privacy: { ...current.privacy, [property]: value },
-    }));
-    setStatusMessage("Privacy preferences updated.");
+  function openSection(section: SettingsSection) {
+    setActiveSection(section);
+    if (status?.kind !== "error") setStatus(null);
   }
 
   function renderSaveRow() {
+    const message =
+      status?.text ??
+      (loadState.kind === "loading"
+        ? "Loading your saved settings…"
+        : userId === null
+          ? "Saving is unavailable until your settings load."
+          : hasUnsavedChanges
+            ? "You have unsaved changes."
+            : "All changes saved.");
+    const isError = status?.kind === "error";
     return (
       <footer className="settings-save-row">
-        <p aria-live="polite">{statusMessage || "Save your changes to update your preferences."}</p>
+        <p
+          aria-live={isError ? "assertive" : "polite"}
+          className={`settings-save-message${isError ? " is-error" : ""}${status?.kind === "success" ? " is-success" : ""}`}
+          role={isError ? "alert" : "status"}
+        >
+          {message}
+        </p>
         <div>
-          <button className="settings-button settings-button--secondary" onClick={discardSettings} type="button">
+          <button
+            className="settings-button settings-button--secondary"
+            disabled={!hasUnsavedChanges || saving}
+            onClick={discardSettings}
+            type="button"
+          >
             Discard
           </button>
-          <button className="settings-button settings-button--primary" onClick={saveSettings} type="button">
-            Save changes
+          <button
+            aria-busy={saving}
+            className="settings-button settings-button--primary"
+            disabled={!canSave}
+            onClick={() => void handleSave()}
+            type="button"
+          >
+            {saving ? "Saving…" : isError && hasUnsavedChanges ? "Try again" : "Save changes"}
           </button>
         </div>
       </footer>
@@ -348,10 +306,7 @@ function Settings({
               aria-current={activeSection === item.id ? "page" : undefined}
               className={`settings-sidebar__item${activeSection === item.id ? " is-active" : ""}`}
               key={item.id}
-              onClick={() => {
-                setActiveSection(item.id);
-                setStatusMessage("");
-              }}
+              onClick={() => openSection(item.id)}
               type="button"
             >
               <span aria-hidden="true">{item.icon}</span>
@@ -367,7 +322,41 @@ function Settings({
           <p>{activeSectionInfo.description}</p>
         </header>
 
-        <div className="settings-card">
+        {loadState.kind === "error" && (
+          <div className="settings-banner settings-banner--error" role="alert">
+            <p>
+              {loadState.message} You're seeing default settings, and changes can't be saved
+              until they load.
+            </p>
+            <button
+              className="settings-button settings-button--secondary"
+              onClick={() => void fetchSettings()}
+              type="button"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        <div className="settings-card" aria-busy={loadState.kind === "loading"}>
+          {activeSection === "overview" && (
+            <OverviewSettings
+              account={account}
+              loading={loadState.kind === "loading"}
+              value={draft}
+              onEditProfile={() => openSection("profile")}
+              onOpenSection={openSection}
+              onPlannerChange={(property, value) => updateSetting("planner", property, value)}
+              onReminderChange={(name, enabled) =>
+                updateSetting("notifications", "reminders", {
+                  ...draft.notifications.reminders,
+                  [name]: enabled,
+                })
+              }
+              onGoalPriorityChange={(value) => updateSetting("goals", "priority", value)}
+              onThemeChange={onThemeChange}
+            />
+          )}
           {activeSection === "profile" && (
             <ProfileSettings
               value={draft.profile}
@@ -413,17 +402,12 @@ function Settings({
           {activeSection === "privacy" && (
             <PrivacySettings
               value={draft.privacy}
-              onChange={updatePrivacySetting}
+              onChange={(property, value) => updateSetting("privacy", property, value)}
               onExport={downloadSettingsData}
               onReviewDelete={() => setDeleteReviewOpen(true)}
             />
           )}
-          {activeSection !== "privacy" && renderSaveRow()}
-          {activeSection === "privacy" && statusMessage && (
-            <p aria-live="polite" className="settings-save-status">
-              {statusMessage}
-            </p>
-          )}
+          {renderSaveRow()}
         </div>
       </section>
 
@@ -452,7 +436,7 @@ function Settings({
                 className="settings-button settings-button--danger"
                 onClick={() => {
                   setDeleteReviewOpen(false);
-                  setStatusMessage("Account deletion is not available in this demo.");
+                  setStatus({ kind: "info", text: "Account deletion is not available in this demo." });
                 }}
                 type="button"
               >
@@ -463,6 +447,172 @@ function Settings({
         </div>
       )}
     </main>
+  );
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Something went wrong. Please try again.";
+}
+
+function initialsFor(profile: SettingsValues["profile"], account: AccountInfo | null) {
+  const initials = `${profile.firstName.trim()[0] ?? ""}${profile.lastName.trim()[0] ?? ""}`;
+  return (initials || account?.username[0] || "?").toUpperCase();
+}
+
+function formatGraduation(value: string) {
+  if (!value) return "";
+  const [year, month] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(
+    new Date(year, month - 1, 1),
+  );
+}
+
+type PlannerValues = SettingsValues["planner"];
+type PlannerProperty = keyof PlannerValues;
+
+/** The screen Settings opens to: account summary plus the preferences students change most. */
+function OverviewSettings({
+  account,
+  loading,
+  value,
+  onEditProfile,
+  onOpenSection,
+  onPlannerChange,
+  onReminderChange,
+  onGoalPriorityChange,
+  onThemeChange,
+}: {
+  account: AccountInfo | null;
+  loading: boolean;
+  value: SettingsValues;
+  onEditProfile: () => void;
+  onOpenSection: (section: SettingsSection) => void;
+  onPlannerChange: <Property extends PlannerProperty>(
+    property: Property,
+    nextValue: PlannerValues[Property],
+  ) => void;
+  onReminderChange: (name: ReminderLabel, enabled: boolean) => void;
+  onGoalPriorityChange: (value: SettingsValues["goals"]["priority"]) => void;
+  onThemeChange: (theme: ThemePreference) => void;
+}) {
+  const { profile, planner, notifications, goals } = value;
+  const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+  const studies = [profile.major, profile.school].filter(Boolean).join(" · ");
+  const graduation = formatGraduation(profile.graduationDate);
+
+  return (
+    <div className="settings-overview">
+      <section aria-labelledby="settings-account-title" className="settings-account-card">
+        <div className="settings-avatar" aria-hidden="true">
+          {profile.avatar ? <img alt="" src={profile.avatar} /> : initialsFor(profile, account)}
+        </div>
+        <div className="settings-account-card__details">
+          <h3 id="settings-account-title">
+            {loading ? "Loading your account…" : fullName || "Add your name"}
+          </h3>
+          <dl>
+            <div>
+              <dt>Email</dt>
+              <dd>{profile.email || "Not set"}</dd>
+            </div>
+            {account?.username && (
+              <div>
+                <dt>Username</dt>
+                <dd>{account.username}</dd>
+              </div>
+            )}
+            <div>
+              <dt>Studies</dt>
+              <dd>{studies || "Not set"}</dd>
+            </div>
+            {graduation && (
+              <div>
+                <dt>Graduating</dt>
+                <dd>{graduation}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+        <button
+          className="settings-button settings-button--secondary"
+          onClick={onEditProfile}
+          type="button"
+        >
+          Edit profile
+        </button>
+      </section>
+
+      <SettingsPanel
+        title="Top preferences"
+        description="Change these here and press Save changes. The theme applies and saves right away."
+      >
+        <SegmentedSetting
+          label="Theme"
+          options={["Light mode", "Dark mode", "System default"]}
+          onChange={(next) => {
+            onPlannerChange("theme", next);
+            onThemeChange(next);
+          }}
+          value={planner.theme}
+        />
+        <AccentSetting value={planner.accent} onChange={(next) => onPlannerChange("accent", next)} />
+        <div className="settings-form-grid">
+          <SegmentedSetting
+            label="Planner view"
+            options={["Daily", "Weekly", "Monthly"]}
+            onChange={(next) => onPlannerChange("view", next)}
+            value={planner.view}
+          />
+          <SegmentedSetting
+            label="Default landing page"
+            options={["Dashboard", "Planner", "Goals"]}
+            onChange={(next) => onPlannerChange("landingPage", next)}
+            value={planner.landingPage}
+          />
+        </div>
+        <SegmentedSetting
+          label="Default goal priority"
+          options={["Low", "Medium", "High"]}
+          onChange={onGoalPriorityChange}
+          value={goals.priority}
+        />
+        <div className="settings-field">
+          <span className="settings-field__label">Key reminders</span>
+          <div className="settings-overview-toggles">
+            {(["Daily planning reminder", "Deadline notifications", "Weekly review reminder"] as const).map(
+              (name) => (
+                <ToggleSetting
+                  checked={notifications.reminders[name]}
+                  key={name}
+                  label={name}
+                  onChange={(next) => onReminderChange(name, next)}
+                />
+              ),
+            )}
+          </div>
+        </div>
+      </SettingsPanel>
+
+      <nav aria-label="All settings" className="settings-overview-links">
+        <h3>All settings</h3>
+        <ul>
+          {sectionItems
+            .filter((item) => item.id !== "overview")
+            .map((item) => (
+              <li key={item.id}>
+                <button onClick={() => onOpenSection(item.id)} type="button">
+                  <span aria-hidden="true">{item.icon}</span>
+                  <span>
+                    <strong>{item.label}</strong>
+                    <small>{item.summary}</small>
+                  </span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              </li>
+            ))}
+        </ul>
+      </nav>
+    </div>
   );
 }
 
@@ -481,7 +631,7 @@ function ProfileSettings({
   ) => void;
   onPictureChange: (file: File | undefined) => void;
 }) {
-  const initials = `${value.firstName[0] ?? "A"}${value.lastName[0] ?? "L"}`.toUpperCase();
+  const initials = initialsFor(value, null);
   return (
     <SettingsPanel
       title="Profile details"
@@ -501,7 +651,7 @@ function ProfileSettings({
             type="file"
           />
         </label>
-        <small>Recommended 320 × 320 or larger.</small>
+        <small>Recommended 320 × 320 or larger. Picture uploads are a preview for now and aren't saved yet.</small>
       </div>
       <div className="settings-form-grid">
         <TextSetting label="First name" onChange={(next) => onChange("firstName", next)} placeholder="Enter first name" value={value.firstName} />
@@ -509,7 +659,7 @@ function ProfileSettings({
         <TextSetting label="Email address" onChange={(next) => onChange("email", next)} placeholder="name@university.edu" type="email" value={value.email} />
         <TextSetting label="College/university" onChange={(next) => onChange("school", next)} placeholder="Enter college or university" value={value.school} />
         <TextSetting label="Major or field of study" onChange={(next) => onChange("major", next)} placeholder="Enter major or field" value={value.major} />
-        <TextSetting label="Expected graduation date" onChange={(next) => onChange("graduationDate", next)} placeholder="MM / YYYY" value={value.graduationDate} />
+        <TextSetting label="Expected graduation date" onChange={(next) => onChange("graduationDate", next)} placeholder="YYYY-MM" type="month" value={value.graduationDate} />
         <TextSetting label="Career interests" onChange={(next) => onChange("careerInterests", next)} placeholder="e.g. cybersecurity, software engineering, data science" value={value.careerInterests} />
         <TextSetting label="Current career goal(s)" onChange={(next) => onChange("careerGoals", next)} placeholder="Enter current career goals" value={value.careerGoals} />
       </div>
@@ -517,8 +667,31 @@ function ProfileSettings({
   );
 }
 
-type PlannerValues = SettingsValues["planner"];
-type PlannerProperty = keyof PlannerValues;
+function AccentSetting({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="settings-field">
+      <span className="settings-field__label">Accent color</span>
+      <div className="settings-color-picker">
+        <span className="settings-color-picker__preview" style={{ backgroundColor: value }} />
+        <span>Choose a color theme</span>
+        <div>
+          {accentOptions.map((option) => (
+            <button
+              aria-label={`${option.label} accent${value === option.value ? ", selected" : ""}`}
+              aria-pressed={value === option.value}
+              className={value === option.value ? "is-selected" : ""}
+              key={option.value}
+              onClick={() => onChange(option.value)}
+              type="button"
+            >
+              <img alt="" src={option.icon} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PlannerSettings({
   value,
@@ -543,29 +716,9 @@ function PlannerSettings({
         }}
         value={value.theme}
       />
-      <div className="settings-field">
-        <span className="settings-field__label">Accent color</span>
-        <div className="settings-color-picker">
-          <span className="settings-color-picker__preview" style={{ backgroundColor: value.accent }} />
-          <span>Choose a color theme</span>
-          <div>
-            {accentOptions.map((option) => (
-              <button
-                aria-label={`${option.label} accent${value.accent === option.value ? ", selected" : ""}`}
-                aria-pressed={value.accent === option.value}
-                className={value.accent === option.value ? "is-selected" : ""}
-                key={option.value}
-                onClick={() => onChange("accent", option.value)}
-                type="button"
-              >
-                <img alt="" src={option.icon} />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <AccentSetting value={value.accent} onChange={(next) => onChange("accent", next)} />
       <SegmentedSetting label="Planner view" options={["Daily", "Weekly", "Monthly"]} onChange={(next) => onChange("view", next)} value={value.view} />
-      <SelectSetting label="Start of the week" onChange={(next) => onChange("startWeek", next)} options={["Sunday", "Monday", "Saturday"]} value={value.startWeek} />
+      <SelectSetting label="Start of the week" onChange={(next) => onChange("startWeek", next as PlannerValues["startWeek"])} options={["Sunday", "Monday", "Saturday"]} value={value.startWeek} />
       <SegmentedSetting label="Time format" options={["12-hour clock", "24-hour clock"]} onChange={(next) => onChange("timeFormat", next)} value={value.timeFormat} />
       <div className="settings-field">
         <span className="settings-field__label">Default landing page</span>
@@ -595,13 +748,13 @@ function NotificationSettings({
     nextValue: NotificationValues[Property],
   ) => void;
 }) {
-  function setReminder(name: string, enabled: boolean) {
+  function setReminder(name: ReminderLabel, enabled: boolean) {
     onChange("reminders", { ...value.reminders, [name]: enabled });
   }
   return (
     <SettingsPanel title="Reminder and notification defaults" description="Turn each reminder on or off, then set quiet hours for when you prefer fewer interruptions.">
       <div className="settings-reminders">
-        {Object.keys(value.reminders).map((name) => (
+        {REMINDER_LABELS.map((name) => (
           <div className="settings-reminder-row" key={name}>
             <strong>{name}</strong>
             <SegmentedSetting
@@ -692,6 +845,9 @@ function UnfinishedTaskSettings({
 type WeeklyValues = SettingsValues["weekly"];
 type WeeklyProperty = keyof WeeklyValues;
 
+/** Monday-first order for the review day picker. */
+const REVIEW_DAY_OPTIONS = [...WEEKDAYS.slice(1), WEEKDAYS[0]];
+
 function WeeklySettings({
   value,
   onChange,
@@ -702,21 +858,20 @@ function WeeklySettings({
     nextValue: WeeklyValues[Property],
   ) => void;
 }) {
-  const summaries = ["Tasks completed", "Goals completed", "Milestones reached", "Time spent", "Completion rate"];
   return (
     <SettingsPanel title="Weekly progress review settings" description="Configure the cadence, reminders, and content for your weekly review.">
-      <SegmentedSetting label="Review day" onChange={(next) => onChange("reviewDay", next)} options={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]} value={value.reviewDay} />
+      <SegmentedSetting label="Review day" onChange={(next) => onChange("reviewDay", next)} options={REVIEW_DAY_OPTIONS} value={value.reviewDay} />
       <div className="settings-weekly-reminder">
         <ToggleSetting checked={value.reminder} label="Review reminder" onChange={(next) => onChange("reminder", next)} />
         <label className="settings-time-input">
           <span className="visually-hidden">Reminder time</span>
-          <input disabled={!value.reminder} onChange={(event) => onChange("reminderTime", event.target.value)} type="time" value={value.reminderTime} />
+          <input disabled={!value.reminder} onChange={(event) => onChange("reminderTime", event.target.value)} required type="time" value={value.reminderTime} />
         </label>
       </div>
       <div className="settings-field">
         <span className="settings-field__label">Weekly summary</span>
         <div className="settings-chip-list">
-          {summaries.map((summary) => {
+          {SUMMARY_LABELS.map((summary) => {
             const selected = value.summary.includes(summary);
             return (
               <button
@@ -728,7 +883,7 @@ function WeeklySettings({
                     "summary",
                     selected
                       ? value.summary.filter((item) => item !== summary)
-                      : [...value.summary, summary],
+                      : SUMMARY_LABELS.filter((item) => item === summary || value.summary.includes(item)),
                   )
                 }
                 type="button"
@@ -764,36 +919,34 @@ function PrivacySettings({
   onReviewDelete: () => void;
 }) {
   return (
-    <>
-      <SettingsPanel title="Account security and data" description="Update your password, export planner data, and choose how your account data is handled.">
-        <div className="settings-field">
-          <span className="settings-field__label">Export planner and goal data</span>
-          <div className="settings-export-row">
-            <div>
-              <strong>Export planner and goal data</strong>
-              <p>Download a copy of your planner, goals, and progress history for personal records or migration.</p>
-            </div>
-            <button className="settings-button settings-button--primary" onClick={onExport} type="button">Export data</button>
-          </div>
-        </div>
-        <SegmentedSetting label="Data backup preferences" onChange={(next) => onChange("backup", next)} options={["Automatic", "Manual", "Off"]} value={value.backup} />
-        <div className="settings-privacy-toggle">
+    <SettingsPanel title="Account security and data" description="Export planner data and choose how your account data is handled.">
+      <div className="settings-field">
+        <span className="settings-field__label">Export planner and goal data</span>
+        <div className="settings-export-row">
           <div>
-            <strong>{value.deleteCompleted ? "On" : "Off"}</strong>
-            <p>Automatically remove completed tasks after a set period to keep your planner tidy.</p>
+            <strong>Export planner and goal data</strong>
+            <p>Download a copy of your planner, goals, and progress history for personal records or migration.</p>
           </div>
-          <ToggleSetting checked={value.deleteCompleted} label="Delete completed tasks automatically" onChange={(next) => onChange("deleteCompleted", next)} />
+          <button className="settings-button settings-button--primary" onClick={onExport} type="button">Export data</button>
         </div>
-        <div className="settings-danger-card">
-          <span aria-hidden="true">!</span>
-          <div>
-            <strong>Delete account</strong>
-            <p>This action permanently removes your account, planner data, goals, and backups. This cannot be undone.</p>
-            <button className="settings-button settings-button--secondary" onClick={onReviewDelete} type="button">Review account deletion</button>
-          </div>
+      </div>
+      <SegmentedSetting label="Data backup preferences" onChange={(next) => onChange("backup", next)} options={["Automatic", "Manual", "Off"]} value={value.backup} />
+      <div className="settings-privacy-toggle">
+        <div>
+          <strong>{value.deleteCompleted ? "On" : "Off"}</strong>
+          <p>Automatically remove completed tasks after a set period to keep your planner tidy.</p>
         </div>
-      </SettingsPanel>
-    </>
+        <ToggleSetting checked={value.deleteCompleted} label="Delete completed tasks automatically" onChange={(next) => onChange("deleteCompleted", next)} />
+      </div>
+      <div className="settings-danger-card">
+        <span aria-hidden="true">!</span>
+        <div>
+          <strong>Delete account</strong>
+          <p>This action permanently removes your account, planner data, goals, and backups. This cannot be undone.</p>
+          <button className="settings-button settings-button--secondary" onClick={onReviewDelete} type="button">Review account deletion</button>
+        </div>
+      </div>
+    </SettingsPanel>
   );
 }
 

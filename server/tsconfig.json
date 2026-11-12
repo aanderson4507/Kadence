@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": [".", "../prisma/seed.ts", "../prisma.config.ts"]
+  "include": [".", "../prisma/seed.ts", "../prisma.config.ts", "../src/**/*.test.ts"]
 }

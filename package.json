@@ -12,6 +12,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck:server": "tsc -p server/tsconfig.json",
+    "test": "node --import tsx --test \"server/**/*.test.ts\" \"src/**/*.test.ts\"",
     "postinstall": "prisma generate --config prisma.config.ts",
     "db:generate": "prisma generate --config prisma.config.ts",
     "db:migrate": "prisma migrate dev --config prisma.config.ts",
