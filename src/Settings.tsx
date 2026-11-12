@@ -21,6 +21,7 @@ import {
   type SettingsValues,
   type ThemePreference,
 } from "./settingsApi";
+import { validateStudyPreferences, type StudyPreferences } from "./studySessions";
 
 type SettingsSection =
   | "overview"
@@ -30,6 +31,7 @@ type SettingsSection =
   | "goals"
   | "unfinished"
   | "weekly"
+  | "study"
   | "privacy";
 
 function withTheme(values: SettingsValues, theme: ThemePreference): SettingsValues {
@@ -101,6 +103,14 @@ const sectionItems: {
     summary: "Review day, reminder, and summary content",
   },
   {
+    id: "study",
+    label: "Exam study sessions",
+    icon: "✎",
+    title: "Exam study sessions",
+    description: "Choose how Kadence sets aside study time in the days before tasks you mark as exams.",
+    summary: "Study days, session length, and study hours",
+  },
+  {
     id: "privacy",
     label: "Privacy and account management",
     icon: "⚙",
@@ -125,12 +135,15 @@ type SettingsProps = {
   isDarkMode: boolean;
   onThemeChange: (theme: ThemePreference) => void;
   onExport: (preferences: object) => void;
+  /** Called with the saved (not draft) study preferences whenever they load or change. */
+  onStudyPreferencesChange: (preferences: StudyPreferences) => void;
   themePreference: ThemePreference;
 };
 
 function Settings({
   isDarkMode,
   onExport,
+  onStudyPreferencesChange,
   onThemeChange,
   themePreference,
 }: SettingsProps) {
@@ -172,6 +185,11 @@ function Settings({
     // Load once when the workspace opens; Retry calls fetchSettings again.
     void fetchSettings();
   }, []);
+
+  const savedStudy = savedSettings.study;
+  useEffect(() => {
+    onStudyPreferencesChange(savedStudy);
+  }, [savedStudy, onStudyPreferencesChange]);
 
   // The theme applies and saves right away, whether it is changed here or from the header.
   useEffect(() => {
@@ -397,6 +415,12 @@ function Settings({
             <WeeklySettings
               value={draft.weekly}
               onChange={(property, value) => updateSetting("weekly", property, value)}
+            />
+          )}
+          {activeSection === "study" && (
+            <StudySettings
+              value={draft.study}
+              onChange={(property, value) => updateSetting("study", property, value)}
             />
           )}
           {activeSection === "privacy" && (
@@ -897,6 +921,96 @@ function WeeklySettings({
       <ToggleSetting checked={value.reflectionQuestions} label="Reflection questions" onChange={(next) => onChange("reflectionQuestions", next)} />
       <SegmentedSetting label="Missed-goal handling" onChange={(next) => onChange("missedGoal", next)} options={["Keep", "Reschedule", "Revise", "Archive"]} value={value.missedGoal} />
       <SegmentedSetting label="Progress visualization" onChange={(next) => onChange("visualization", next)} options={["Charts", "Progress bars", "Percentages"]} value={value.visualization} />
+    </SettingsPanel>
+  );
+}
+
+type StudyProperty = keyof StudyPreferences;
+
+const hourOptions = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, index) => {
+    const hour = from + index;
+    return { value: String(hour), label: formatHourLabel(hour) };
+  });
+
+function formatHourLabel(hour: number) {
+  if (hour === 0 || hour === 24) return "12 AM (midnight)";
+  if (hour === 12) return "12 PM (noon)";
+  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+}
+
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+
+function StudySettings({
+  value,
+  onChange,
+}: {
+  value: StudyPreferences;
+  onChange: <Property extends StudyProperty>(
+    property: Property,
+    nextValue: StudyPreferences[Property],
+  ) => void;
+}) {
+  const problem = validateStudyPreferences(value);
+  const windowHours = value.windowEndHour - value.windowStartHour;
+  // How many sessions fit in the window, allowing a one-hour break between sessions.
+  const fitPerDay = Math.max(0, Math.floor((windowHours + 1) / (value.sessionHours + 1)));
+  const tight = !problem && value.sessionsPerDay > fitPerDay;
+
+  return (
+    <SettingsPanel
+      title="Study time before exams"
+      description="Mark a task as an exam in the To-do list or Priority setter, and Kadence adds study sessions to your planner in the days before it."
+    >
+      <div className="settings-form-grid">
+        <SelectSetting
+          label="Start studying"
+          onChange={(next) => onChange("daysBeforeExam", Number(next))}
+          options={Array.from({ length: 30 }, (_, index) => ({
+            value: String(index + 1),
+            label: `${plural(index + 1, "day")} before the exam`,
+          }))}
+          value={String(value.daysBeforeExam)}
+        />
+        <SelectSetting
+          label="Session length"
+          onChange={(next) => onChange("sessionHours", Number(next))}
+          options={Array.from({ length: 8 }, (_, index) => ({
+            value: String(index + 1),
+            label: plural(index + 1, "hour"),
+          }))}
+          value={String(value.sessionHours)}
+        />
+      </div>
+      <SegmentedSetting
+        label="Sessions per study day"
+        onChange={(next) => onChange("sessionsPerDay", Number(next))}
+        options={["1", "2", "3", "4", "5", "6"]}
+        value={String(value.sessionsPerDay)}
+      />
+      <div className="settings-form-grid">
+        <SelectSetting
+          label="Study hours · From"
+          onChange={(next) => onChange("windowStartHour", Number(next))}
+          options={hourOptions(0, 23)}
+          value={String(value.windowStartHour)}
+        />
+        <SelectSetting
+          label="Study hours · Until"
+          onChange={(next) => onChange("windowEndHour", Number(next))}
+          options={hourOptions(1, 24)}
+          value={String(value.windowEndHour)}
+        />
+      </div>
+      <p
+        className={`settings-study-preview${problem ? " is-error" : ""}`}
+        role={problem ? "alert" : undefined}
+      >
+        {problem ??
+          `Kadence will schedule ${plural(value.sessionsPerDay, "session")} of ${plural(value.sessionHours, "hour")} on each of the ${plural(value.daysBeforeExam, "day")} before an exam, between ${formatHourLabel(value.windowStartHour)} and ${formatHourLabel(value.windowEndHour)}, around what's already in your planner.`}
+        {tight &&
+          ` Your study hours only fit ${plural(fitPerDay, "session")} with a break between them, so sessions may run back to back.`}
+      </p>
     </SettingsPanel>
   );
 }

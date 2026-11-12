@@ -72,6 +72,17 @@ type, goal size, and optional linked task; edit task details, status, schedule,
 description, and notes; or delete tasks with confirmation. Planner changes are
 kept in page state and reset on refresh.
 
+Mark a task as an exam with the **Exam** button when adding it in the To-do
+list, from a task's ⋯ menu, or with **This is an exam** in the Priority setter.
+Kadence then schedules study sessions in the days before the exam inside your
+study hours, around events already in the Visual Planner (use **Next study
+session** to jump to them). The Breakdown page lists each exam's sessions and
+warns when some don't fit. Change the number of study days, session length,
+sessions per day and study hours in Settings → Exam study sessions. Tasks are
+listed in priority order: priority level, then a boost for exams, then the
+nearest deadlines (see `src/taskPriority.ts`; scheduling rules are in
+`src/studySessions.ts`).
+
 Open Settings from the workspace gear or the Goals sidebar. It opens to an
 Overview with your account details and the preferences changed most often
 (theme, accent color, planner view, landing page, default goal priority, and

@@ -2,11 +2,31 @@ import { useState, type CSSProperties } from "react";
 import "./Breakdown.css";
 import type { Task } from "./TodoList";
 import type { Goal } from "./Goals";
+import type { StudyPlan } from "./studySessions";
+import { describeUrgency, sortTasksByPriority, todayKey } from "./taskPriority";
 
 type BreakdownProps = {
   tasks: Task[];
   goals: Goal[];
+  studyPlan: StudyPlan;
+  onOpenPlanner: () => void;
+  onOpenStudySettings: () => void;
 };
+
+function formatDay(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(
+    new Date(year, month - 1, day),
+  );
+}
+
+function formatHours(startHour: number, duration: number) {
+  const label = (hour: number) => {
+    const h = hour % 24;
+    return `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
+  };
+  return `${label(startHour)}–${label(startHour + duration)}`;
+}
 
 type ProgressStyle = CSSProperties & {
   "--progress-angle": string;
@@ -48,7 +68,12 @@ const connectedGoals = [
   },
 ];
 
-function Breakdown({ tasks: _tasks, goals }: BreakdownProps) {
+function Breakdown({ tasks, goals, studyPlan, onOpenPlanner, onOpenStudySettings }: BreakdownProps) {
+  const today = todayKey();
+  const upcomingExams = sortTasksByPriority(
+    tasks.filter((task) => task.isExam && !task.completed && (!task.dueDate || task.dueDate > today)),
+    today,
+  );
   const [milestones, setMilestones] = useState(initialMilestones);
   const completedCount = milestones.filter((milestone) => milestone.completed).length;
   const progress = Math.round((completedCount / milestones.length) * 100);
@@ -188,6 +213,69 @@ function Breakdown({ tasks: _tasks, goals }: BreakdownProps) {
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="breakdown-card breakdown-study" aria-labelledby="study-plan-title">
+          <div className="breakdown-card__heading">
+            <h2 id="study-plan-title">Exam study plan</h2>
+            <p>Study sessions Kadence set aside before your upcoming exams.</p>
+          </div>
+          {upcomingExams.length === 0 ? (
+            <p className="breakdown-study__empty">
+              No upcoming exams. Mark a task as an exam in the To-do list or Priority setter and
+              Kadence will schedule study time before it.
+            </p>
+          ) : (
+            <ul className="breakdown-study__exams">
+              {upcomingExams.map((exam) => {
+                const sessions = studyPlan.sessions.filter((session) => session.examId === exam.id);
+                const missing = studyPlan.shortfalls
+                  .filter((shortfall) => shortfall.examId === exam.id)
+                  .reduce((total, shortfall) => total + shortfall.missing, 0);
+                return (
+                  <li key={exam.id}>
+                    <div className="breakdown-study__exam-heading">
+                      <strong>{exam.title}</strong>
+                      <span>
+                        {exam.priority} priority
+                        {exam.dueDate ? ` · ${describeUrgency({ ...exam, isExam: false }, today)}` : ""}
+                      </span>
+                    </div>
+                    {!exam.dueDate ? (
+                      <p className="breakdown-study__warning">
+                        Add the exam date in the To-do list to schedule study sessions.
+                      </p>
+                    ) : sessions.length === 0 && missing === 0 ? (
+                      <p className="breakdown-study__empty">No study days left before this exam.</p>
+                    ) : (
+                      <ol>
+                        {sessions.map((session) => (
+                          <li key={session.id}>
+                            <span>{formatDay(session.date)}</span>
+                            <span>{formatHours(session.startHour, session.duration)}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    {missing > 0 && (
+                      <p className="breakdown-study__warning" role="status">
+                        {missing} {missing === 1 ? "session" : "sessions"} didn&apos;t fit around
+                        your planner. Widen your study hours or free up time.
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="breakdown-study__actions">
+            <button onClick={onOpenPlanner} type="button">
+              View in planner
+            </button>
+            <button onClick={onOpenStudySettings} type="button">
+              Study settings
+            </button>
           </div>
         </section>
 

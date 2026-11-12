@@ -513,3 +513,49 @@
     flex-wrap: wrap;
   }
 }
+
+/* Exam flag (user story: exam study time) */
+.priority-exam-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  background: #fff;
+  cursor: pointer;
+}
+
+.priority-exam-option--selected {
+  border-color: #e7c79c;
+  background: #fdf6ec;
+}
+
+.priority-exam-option input {
+  margin: 2px 0 0;
+  accent-color: var(--color-brand);
+}
+
+.priority-exam-option strong,
+.priority-exam-option span span {
+  display: block;
+}
+
+.priority-exam-option strong {
+  font-size: 12px;
+}
+
+.priority-exam-option span span {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.priority-announcement {
+  min-height: 1em;
+  margin: 8px 0 0;
+  color: var(--color-brand);
+  font-size: 11px;
+}

@@ -32,6 +32,7 @@ function customized(): SettingsValues {
     goals: { ...DEFAULT_SETTINGS.goals, priority: "High", category: "Personal development" },
     unfinished: { ...DEFAULT_SETTINGS.unfinished, behavior: "Move to a task backlog for later scheduling", dailyLimit: 8 },
     weekly: { ...DEFAULT_SETTINGS.weekly, reviewDay: "Sunday", reminderTime: "09:15", summary: ["Completion rate", "Time spent"] },
+    study: { daysBeforeExam: 5, sessionHours: 2, sessionsPerDay: 2, windowStartHour: 9, windowEndHour: 17 },
     privacy: { backup: "Manual", deleteCompleted: false },
   };
 }
@@ -55,6 +56,9 @@ describe("settings mapping", () => {
     assert.equal(preferences.reviewDay, 0);
     assert.equal(preferences.reviewMinute, 9 * 60 + 15);
     assert.deepEqual(preferences.reviewSummaryItems, ["TIME_SPENT", "COMPLETION_RATE"]);
+    assert.equal(preferences.studyDaysBeforeExam, 5);
+    assert.equal(preferences.studySessionHours, 2);
+    assert.equal(preferences.studyWindowStartHour, 9);
   });
 
   it("sends empty quiet hours as null", () => {
@@ -103,6 +107,11 @@ describe("validateSettings", () => {
   it("requires both Do Not Disturb times or neither", () => {
     const halfQuiet = { ...valid, notifications: { ...valid.notifications, quietEnd: "" } };
     assert.match(validateSettings(halfQuiet)!, /Do Not Disturb/);
+  });
+
+  it("checks study session preferences", () => {
+    const tooShort = { ...valid, study: { ...valid.study, windowStartHour: 16, windowEndHour: 17, sessionHours: 2 } };
+    assert.match(validateSettings(tooShort)!, /shorter than one study session/);
   });
 
   it("keeps the daily task limit within 0-20", () => {

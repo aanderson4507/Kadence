@@ -125,6 +125,12 @@ const PREFERENCE_PARSERS = {
   reflectionQuestions: booleanField,
   missedGoalHandling: enumField(MissedGoalHandling),
   visualization: enumField(ProgressVisualization),
+  // Exam study sessions
+  studyDaysBeforeExam: integerField(1, 30),
+  studySessionHours: integerField(1, 8),
+  studySessionsPerDay: integerField(1, 6),
+  studyWindowStartHour: integerField(0, 23),
+  studyWindowEndHour: integerField(1, 24),
   // Privacy and account management
   backup: enumField(BackupPreference),
   deleteCompleted: booleanField,
@@ -219,6 +225,17 @@ export function parseSettingsUpdate(body: Record<string, unknown>) {
   }
   if (hasStart && (preferences.quietStartMinute === null) !== (preferences.quietEndMinute === null)) {
     throw new ValidationError("Set both Do Not Disturb times, or clear both.");
+  }
+
+  const hasWindowStart = "studyWindowStartHour" in preferences;
+  if (hasWindowStart !== "studyWindowEndHour" in preferences) {
+    throw new ValidationError("Send studyWindowStartHour and studyWindowEndHour together.");
+  }
+  if (
+    hasWindowStart &&
+    (preferences.studyWindowStartHour as number) >= (preferences.studyWindowEndHour as number)
+  ) {
+    throw new ValidationError("The study window must end after it starts.");
   }
 
   return {

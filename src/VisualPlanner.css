@@ -1319,3 +1319,29 @@ button.planner-category-chip {
     min-width: 100%;
   }
 }
+
+/* Study sessions generated from exams (user story: exam study time) */
+.planner-event--study {
+  border: 1px dashed #8ea3c9;
+}
+
+.planner-event--study.planner-event--selected {
+  border-style: solid;
+}
+
+.planner-study-jump {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #c9d5ea;
+  border-radius: 6px;
+  color: #435b89;
+  background: #eef3fb;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.planner-study-jump:hover {
+  background: #e2eaf8;
+}

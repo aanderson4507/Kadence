@@ -609,6 +609,31 @@
   font-weight: 600;
 }
 
+.settings-study-preview {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  color: #4f5e54;
+  background: #f0f3f0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.settings-study-preview.is-error {
+  color: #a44845;
+  background: #fff6f5;
+}
+
+.settings-page[data-theme="dark"] .settings-study-preview {
+  color: #d8e6db;
+  background: #2b3930;
+}
+
+.settings-page[data-theme="dark"] .settings-study-preview.is-error {
+  color: #f0a9a3;
+  background: #3a2826;
+}
+
 .settings-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

@@ -2,6 +2,12 @@
 // The page works with readable labels; the API uses the database enum values. The two
 // mapping tables below are the only place that translation happens.
 
+import {
+  DEFAULT_STUDY_PREFERENCES,
+  validateStudyPreferences,
+  type StudyPreferences,
+} from "./studySessions";
+
 export type ThemePreference = "Light mode" | "Dark mode" | "System default";
 
 export type SettingsValues = {
@@ -72,6 +78,7 @@ export type SettingsValues = {
     missedGoal: "Keep" | "Reschedule" | "Revise" | "Archive";
     visualization: "Charts" | "Progress bars" | "Percentages";
   };
+  study: StudyPreferences;
   privacy: {
     backup: "Automatic" | "Manual" | "Off";
     deleteCompleted: boolean;
@@ -225,6 +232,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
     missedGoal: "Keep",
     visualization: "Charts",
   },
+  study: DEFAULT_STUDY_PREFERENCES,
   privacy: {
     backup: "Automatic",
     deleteCompleted: true,
@@ -244,10 +252,11 @@ function timeFromMinutes(value: unknown): string {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 const bool = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback);
+const num = (value: unknown, fallback: number) => (typeof value === "number" ? value : fallback);
 
 /** Converts page values into the PATCH /settings request body (all fields). */
 export function toSettingsPayload(values: SettingsValues) {
-  const { profile, planner, notifications, goals, unfinished, weekly, privacy } = values;
+  const { profile, planner, notifications, goals, unfinished, weekly, study, privacy } = values;
   return {
     profile: {
       email: profile.email.trim(),
@@ -296,6 +305,11 @@ export function toSettingsPayload(values: SettingsValues) {
       reflectionQuestions: weekly.reflectionQuestions,
       missedGoalHandling: toApi("missedGoal", weekly.missedGoal),
       visualization: toApi("visualization", weekly.visualization),
+      studyDaysBeforeExam: study.daysBeforeExam,
+      studySessionHours: study.sessionHours,
+      studySessionsPerDay: study.sessionsPerDay,
+      studyWindowStartHour: study.windowStartHour,
+      studyWindowEndHour: study.windowEndHour,
       backup: toApi("backup", privacy.backup),
       deleteCompleted: privacy.deleteCompleted,
     },
@@ -373,6 +387,13 @@ export function fromSettingsResponse(response: ApiSettings, avatar: string | nul
       missedGoal: fromApi("missedGoal", s.missedGoalHandling, d.weekly.missedGoal),
       visualization: fromApi("visualization", s.visualization, d.weekly.visualization),
     },
+    study: {
+      daysBeforeExam: num(s.studyDaysBeforeExam, d.study.daysBeforeExam),
+      sessionHours: num(s.studySessionHours, d.study.sessionHours),
+      sessionsPerDay: num(s.studySessionsPerDay, d.study.sessionsPerDay),
+      windowStartHour: num(s.studyWindowStartHour, d.study.windowStartHour),
+      windowEndHour: num(s.studyWindowEndHour, d.study.windowEndHour),
+    },
     privacy: {
       backup: fromApi("backup", s.backup, d.privacy.backup),
       deleteCompleted: bool(s.deleteCompleted, d.privacy.deleteCompleted),
@@ -395,7 +416,7 @@ export function validateSettings(values: SettingsValues): string | null {
   if (!Number.isInteger(dailyLimit) || dailyLimit < 0 || dailyLimit > 20) {
     return "Daily task limit must be a whole number from 0 to 20.";
   }
-  return null;
+  return validateStudyPreferences(values.study);
 }
 
 /** True when two values would save the same data (the avatar preview is not saved). */

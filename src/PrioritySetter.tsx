@@ -1,5 +1,6 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { Priority, Task } from "./TodoList";
+import { describeUrgency, sortTasksByPriority, todayKey } from "./taskPriority";
 import "./PrioritySetter.css";
 
 type PrioritySetterProps = {
@@ -25,16 +26,26 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
   const [draftPriority, setDraftPriority] = useState<Priority>(
     tasks[0]?.priority ?? "None",
   );
+  const [draftExam, setDraftExam] = useState(tasks[0]?.isExam ?? false);
   const [announcement, setAnnouncement] = useState("");
+  const today = todayKey();
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId);
-  const filteredTasks = tasks.filter((task) => {
-    const query = searchQuery.trim().toLowerCase();
-    return (
-      task.title.toLowerCase().includes(query) ||
-      task.category.toLowerCase().includes(query)
-    );
-  });
+  // Listed in priority order, so the most important work is at the top.
+  const filteredTasks = sortTasksByPriority(
+    tasks.filter((task) => {
+      const query = searchQuery.trim().toLowerCase();
+      return (
+        task.title.toLowerCase().includes(query) ||
+        task.category.toLowerCase().includes(query) ||
+        (query === "exam" && task.isExam === true)
+      );
+    }),
+    today,
+  );
+  const hasChanges =
+    selectedTask !== undefined &&
+    (draftPriority !== selectedTask.priority || draftExam !== Boolean(selectedTask.isExam));
 
   useEffect(() => {
     if (tasks.length === 0) {
@@ -45,18 +56,21 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
     if (!tasks.some((task) => task.id === selectedTaskId)) {
       setSelectedTaskId(tasks[0].id);
       setDraftPriority(tasks[0].priority);
+      setDraftExam(Boolean(tasks[0].isExam));
     }
   }, [selectedTaskId, tasks]);
 
   function selectTask(task: Task) {
     setSelectedTaskId(task.id);
     setDraftPriority(task.priority);
+    setDraftExam(Boolean(task.isExam));
     setAnnouncement("");
   }
 
   function resetPriority() {
     if (!selectedTask) return;
     setDraftPriority(selectedTask.priority);
+    setDraftExam(Boolean(selectedTask.isExam));
     setAnnouncement("Priority reset to its current value.");
   }
 
@@ -65,11 +79,19 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
     setTasks((currentTasks) =>
       currentTasks.map((task) =>
         task.id === selectedTask.id
-          ? { ...task, priority: draftPriority }
+          ? { ...task, priority: draftPriority, isExam: draftExam }
           : task,
       ),
     );
-    setAnnouncement(`Priority saved as ${draftPriority}.`);
+    const examNote =
+      draftExam && !selectedTask.isExam
+        ? selectedTask.dueDate
+          ? " Study sessions were added to your planner."
+          : " Add a due date in the To-do list to schedule study sessions."
+        : !draftExam && selectedTask.isExam
+          ? " Its study sessions were removed."
+          : "";
+    setAnnouncement(`Priority saved as ${draftPriority}.${examNote}`);
   }
 
   return (
@@ -123,7 +145,9 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
                     </span>
                     <span className="priority-task__details">
                       <strong>{task.title}</strong>
-                      <span>{task.category}</span>
+                      <span>
+                        {[task.category, describeUrgency(task, today)].filter(Boolean).join(" · ")}
+                      </span>
                     </span>
                     <span className="priority-task__value">{task.priority}</span>
                   </button>
@@ -202,6 +226,27 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
                     );
                   })}
                 </fieldset>
+
+                <label
+                  className={`priority-exam-option${draftExam ? " priority-exam-option--selected" : ""}`}
+                >
+                  <input
+                    checked={draftExam}
+                    onChange={(event) => {
+                      setDraftExam(event.target.checked);
+                      setAnnouncement("");
+                    }}
+                    type="checkbox"
+                  />
+                  <span>
+                    <strong>This is an exam</strong>
+                    <span>
+                      {draftExam && !selectedTask.dueDate
+                        ? "Add a due date in the To-do list so Kadence can schedule study sessions."
+                        : "Kadence will set aside study sessions in the days before it. Adjust them in Settings → Exam study sessions."}
+                    </span>
+                  </span>
+                </label>
               </>
             ) : (
               <p className="priority-empty priority-empty--settings">
@@ -213,7 +258,7 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
           <div className="priority-actions">
             <button
               className="priority-reset"
-              disabled={!selectedTask}
+              disabled={!hasChanges}
               onClick={resetPriority}
               type="button"
             >
@@ -221,7 +266,7 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
             </button>
             <button
               className="priority-save"
-              disabled={!selectedTask}
+              disabled={!hasChanges}
               onClick={savePriority}
               type="button"
             >
@@ -229,7 +274,7 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
               <span>Save priority</span>
             </button>
           </div>
-          <p aria-live="polite" className="visually-hidden" role="status">
+          <p aria-live="polite" className="priority-announcement" role="status">
             {announcement}
           </p>
         </section>
@@ -237,7 +282,7 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
 
       <footer className="priority-guidance">
         <span>A little clarity now makes the next step easier.</span>
-        <span>Priorities stay in sync with your to-do list.</span>
+        <span>Listed most important first: priority, exams, then the nearest deadlines.</span>
       </footer>
     </section>
   );

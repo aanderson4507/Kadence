@@ -141,7 +141,8 @@ describe("getSettings", () => {
     assert.equal(result.preferences.theme, "LIGHT");
     assert.equal(result.preferences.reviewMinute, 990);
     // Columns the Settings page doesn't edit are not exposed.
-    assert.equal("studySessionHours" in result.preferences, false);
+    assert.equal("deleteCompletedAfterDays" in result.preferences, false);
+    assert.equal("dashboardMode" in result.preferences, false);
   });
 
   it("creates the settings row with defaults the first time", async () => {
@@ -172,6 +173,11 @@ describe("updateSettings", () => {
         quietStartMinute: 1320,
         quietEndMinute: 420,
         reviewSummaryItems: ["TIME_SPENT", "TIME_SPENT", "COMPLETION_RATE"],
+        studyDaysBeforeExam: 5,
+        studySessionHours: 2,
+        studySessionsPerDay: 2,
+        studyWindowStartHour: 9,
+        studyWindowEndHour: 17,
       },
     });
 
@@ -184,6 +190,8 @@ describe("updateSettings", () => {
     assert.equal(reread.preferences.dailyLimit, 5);
     assert.equal(reread.preferences.quietStartMinute, 1320);
     assert.deepEqual(reread.preferences.reviewSummaryItems, ["TIME_SPENT", "COMPLETION_RATE"]);
+    assert.equal(reread.preferences.studyDaysBeforeExam, 5);
+    assert.equal(reread.preferences.studyWindowEndHour, 17);
     // Untouched preferences keep their values.
     assert.equal(reread.preferences.plannerView, "DAILY");
   });
@@ -207,6 +215,14 @@ describe("updateSettings", () => {
     ["a malformed email", { profile: { email: "alex@" } }, /valid email/],
     ["a bad graduation month", { profile: { graduationDate: "2027-13" } }, /YYYY-MM/],
     ["a too-long name", { profile: { firstName: "x".repeat(101) } }, /100 characters/],
+    ["too many study days", { preferences: { studyDaysBeforeExam: 31 } }, /1 to 30/],
+    ["overly long study sessions", { preferences: { studySessionHours: 9 } }, /1 to 8/],
+    ["half of the study window", { preferences: { studyWindowStartHour: 9 } }, /together/],
+    [
+      "a study window that ends before it starts",
+      { preferences: { studyWindowStartHour: 20, studyWindowEndHour: 18 } },
+      /end after it starts/,
+    ],
     ["half of the quiet hours", { preferences: { quietStartMinute: 60 } }, /together/],
     [
       "one quiet hour cleared",
