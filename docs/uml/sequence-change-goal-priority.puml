@@ -1,0 +1,71 @@
+@startuml kadence-sequence-change-goal-priority
+' User story: "As a perfectionist student, I want to change a goal's priority so that my goal
+' list reflects what is most important right now."
+' Matches server/app.ts (route) and server/services/goalService.ts (updateGoalPriority).
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+  ArrowColor #406B51
+  LifeLineBorderColor #9DB8A6
+  ParticipantBorderColor #406B51
+  ParticipantBackgroundColor #FBFAF7
+  ActorBorderColor #406B51
+}
+
+title Change a goal's priority (Goal Breakdown)
+
+actor "Student" as student
+participant "Goal Breakdown UI\n(React, Vite)" as ui
+participant "Express API\n(server/app.ts)" as api
+participant "GoalService\n(goalService.ts)" as service
+participant "Prisma Client\n(ORM)" as orm
+database "PostgreSQL\n(goals table)" as db
+
+student -> ui : Select new priority (e.g. HIGH)\nin the goal's priority control
+activate ui
+ui -> api : PATCH /api/users/{userId}/goals/{goalId}/priority\n{ "priority": "HIGH" }
+activate api
+api -> api : requireUuid(userId), requireUuid(goalId)
+api -> service : updateGoalPriority(db, userId, goalId, "HIGH")
+activate service
+service -> service : parseEnum(Priority, "HIGH")
+
+alt priority is not a valid Priority value
+  service --> api : throw ValidationError
+  api --> ui : 400 { error: "priority must be one of: ..." }
+  ui --> student : Show validation message;\nkeep previous priority
+else valid priority
+  service -> orm : goal.findFirst({ where: { id: goalId, userId } })
+  activate orm
+  orm -> db : SELECT id FROM goals\nWHERE id = $1 AND user_id = $2 LIMIT 1
+  activate db
+  db --> orm : row | none
+  deactivate db
+  orm --> service : { id } | null
+  deactivate orm
+
+  alt goal not found or owned by another user
+    service --> api : throw NotFoundError
+    api --> ui : 404 { error: "Goal not found." }
+    ui --> student : Show "Goal not found"
+  else goal found
+    service -> orm : goal.update({ where: { id: goalId },\n data: { priority: "HIGH" } })
+    activate orm
+    orm -> db : UPDATE goals SET priority = 'HIGH', updated_at = now()\nWHERE id = $1 RETURNING id, title, priority, updated_at
+    activate db
+    db --> orm : updated row
+    deactivate db
+    orm --> service : Goal { id, title, priority, updatedAt }
+    deactivate orm
+    service --> api : { id, title, priority: "HIGH", updatedAt }
+    deactivate service
+    api --> ui : 200 OK + JSON body
+    deactivate api
+    ui -> ui : Update goal state; priority badge,\nGoal Breakdown and Goals board re-render
+    ui --> student : New priority shown immediately\nand kept when switching views
+  end
+end
+deactivate ui
+
+@enduml

@@ -1,0 +1,524 @@
+// Kadence data model (Part 1, Step 1.2).
+// Source of truth for entities: docs/data-requirements.md.
+//
+// Portability notes (keep the model as database-independent as practical):
+// - Times of day are stored as minutes since midnight (Int), not a native TIME type.
+// - Small structured lists use Json (supported by PostgreSQL, MySQL and SQLite in Prisma).
+// - The only PostgreSQL-specific attributes are @db.Uuid and @db.Date; drop them to target
+//   another provider.
+// - CHECK constraints Prisma cannot express live in the migration SQL
+//   (prisma/migrations/*_init/migration.sql, section "CHECK constraints").
+
+generator client {
+  provider = "prisma-client"
+  output   = "../server/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Priority {
+  VERY_HIGH
+  HIGH
+  MEDIUM
+  LOW
+  VERY_LOW
+  NONE
+}
+
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum PlannerViewPreference {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum WeekStart {
+  SUNDAY
+  MONDAY
+  SATURDAY
+}
+
+enum TimeFormat {
+  TWELVE_HOUR
+  TWENTY_FOUR_HOUR
+}
+
+enum LandingPage {
+  DASHBOARD
+  PLANNER
+  GOALS
+}
+
+enum DashboardMode {
+  SIMPLE
+  ADVANCED
+}
+
+enum GoalTimeframe {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum GoalCategory {
+  ACADEMIC
+  CAREER
+  PERSONAL_DEVELOPMENT
+}
+
+enum GoalBreakdownMethod {
+  MAJOR_MILESTONES
+  DAILY
+  WEEKLY
+  MANUAL
+}
+
+enum CelebrationStyle {
+  MESSAGE
+  ANIMATION
+  OFF
+}
+
+enum ProgressMetric {
+  PERCENT_COMPLETE
+  TASKS_COMPLETED
+  MILESTONES_COMPLETED
+  TIME_SPENT
+}
+
+enum UnfinishedTaskBehavior {
+  ASK
+  MOVE_TO_NEXT_DAY
+  KEEP_ORIGINAL_DATE
+  MOVE_TO_BACKLOG
+}
+
+enum UnfinishedReviewTime {
+  END_OF_DAY
+  START_OF_NEXT_DAY
+  WEEKLY_REVIEW
+  NEVER
+}
+
+enum DeadlineHandling {
+  AUTO_UPDATE
+  KEEP_ORIGINAL
+  ASK
+}
+
+enum MissedGoalHandling {
+  KEEP
+  RESCHEDULE
+  REVISE
+  ARCHIVE
+}
+
+enum ProgressVisualization {
+  CHARTS
+  PROGRESS_BARS
+  PERCENTAGES
+}
+
+enum BackupPreference {
+  AUTOMATIC
+  MANUAL
+  OFF
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum NotificationType {
+  DAILY_PLANNING
+  UPCOMING_TASK
+  DEADLINE
+  GOAL_PROGRESS
+  WEEKLY_REVIEW
+  MISSED_GOAL
+}
+
+enum GoalSize {
+  BIG
+  MEDIUM
+  SMALL
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum PlannerCategory {
+  PERSONAL
+  FOCUS
+  WELLBEING
+  WORK
+}
+
+enum PlannerTaskType {
+  PROJECT
+  TASK
+  HABIT
+}
+
+enum EventStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// ---------------------------------------------------------------------------
+// Account
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  username        String    @unique @db.VarChar(50)
+  email           String    @unique @db.VarChar(255)
+  passwordHash    String    @map("password_hash") @db.VarChar(255)
+  firstName       String?   @map("first_name") @db.VarChar(100)
+  lastName        String?   @map("last_name") @db.VarChar(100)
+  school          String?   @db.VarChar(150)
+  major           String?   @db.VarChar(150)
+  graduationDate  DateTime? @map("graduation_date") @db.Date
+  careerInterests String?   @map("career_interests")
+  careerGoals     String?   @map("career_goals")
+  avatarUrl       String?   @map("avatar_url") @db.VarChar(500)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  settings            UserSettings?
+  priorityRules       PriorityReminderRule[]
+  availabilityWindows AvailabilityWindow[]
+  goals               Goal[]
+  tasks               Task[]
+  plannerEvents       PlannerEvent[]
+  recurrenceRules     RecurrenceRule[]
+  notifications       Notification[]
+  weeklyReviews       WeeklyReview[]
+
+  @@map("users")
+}
+
+/// One row per user. Every column has a default so a row can be created with only userId.
+model UserSettings {
+  userId String @id @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Planner appearance and layout
+  theme       ThemePreference       @default(LIGHT)
+  accentColor String                @default("#406b51") @map("accent_color") @db.VarChar(7)
+  plannerView PlannerViewPreference @default(DAILY) @map("planner_view")
+  weekStart   WeekStart             @default(SUNDAY) @map("week_start")
+  timeFormat  TimeFormat            @default(TWELVE_HOUR) @map("time_format")
+  landingPage LandingPage           @default(DASHBOARD) @map("landing_page")
+
+  // Main screen simplicity and resizable tabs (user stories: simple main screen, resize panels)
+  dashboardMode DashboardMode @default(SIMPLE) @map("dashboard_mode")
+  /// Ordered list of open tabs and their widths, e.g. [{"view":"To do","width":320}]
+  tabLayout     Json?         @map("tab_layout")
+
+  // Notifications and reminders
+  remindDailyPlanning Boolean @default(true) @map("remind_daily_planning")
+  remindUpcoming      Boolean @default(true) @map("remind_upcoming")
+  remindDeadline      Boolean @default(true) @map("remind_deadline")
+  remindGoalProgress  Boolean @default(true) @map("remind_goal_progress")
+  remindWeeklyReview  Boolean @default(true) @map("remind_weekly_review")
+  remindMissedGoal    Boolean @default(true) @map("remind_missed_goal")
+  /// Minutes since midnight (0-1439). Both null or both set.
+  quietStartMinute    Int?    @map("quiet_start_minute")
+  quietEndMinute      Int?    @map("quiet_end_minute")
+
+  // Goal-setting preferences
+  goalTimeframe  GoalTimeframe       @default(DAILY) @map("goal_timeframe")
+  goalCategory   GoalCategory        @default(ACADEMIC) @map("goal_category")
+  goalBreakdown  GoalBreakdownMethod @default(MAJOR_MILESTONES) @map("goal_breakdown")
+  goalPriority   Priority            @default(MEDIUM) @map("goal_priority")
+  celebration    CelebrationStyle    @default(MESSAGE)
+  progressMetric ProgressMetric      @default(PERCENT_COMPLETE) @map("progress_metric")
+
+  // Unfinished task management
+  unfinishedBehavior       UnfinishedTaskBehavior @default(ASK) @map("unfinished_behavior")
+  unfinishedReviewTime     UnfinishedReviewTime   @default(START_OF_NEXT_DAY) @map("unfinished_review_time")
+  deadlineHandling         DeadlineHandling       @default(KEEP_ORIGINAL) @map("deadline_handling")
+  autoReschedule           Boolean                @default(false) @map("auto_reschedule")
+  rescheduleHighOnly       Boolean                @default(false) @map("reschedule_high_only")
+  rescheduleExcludeOverdue Boolean                @default(false) @map("reschedule_exclude_overdue")
+  /// 0-20 tasks carried over per day.
+  dailyLimit               Int                    @default(3) @map("daily_limit")
+  warnOverload             Boolean                @default(true) @map("warn_overload")
+  reprioritizeWhenFull     Boolean                @default(true) @map("reprioritize_when_full")
+
+  // Weekly progress reviews
+  /// 0 = Sunday ... 6 = Saturday
+  reviewDay           Int                   @default(5) @map("review_day")
+  reviewReminder      Boolean               @default(true) @map("review_reminder")
+  /// Minutes since midnight. Default 16:30.
+  reviewMinute        Int                   @default(990) @map("review_minute")
+  /// Subset of: TASKS_COMPLETED, GOALS_COMPLETED, MILESTONES_REACHED, TIME_SPENT, COMPLETION_RATE
+  reviewSummaryItems  Json                  @default("[\"TASKS_COMPLETED\",\"GOALS_COMPLETED\",\"MILESTONES_REACHED\",\"TIME_SPENT\"]") @map("review_summary_items")
+  reflectionQuestions Boolean               @default(true) @map("reflection_questions")
+  missedGoalHandling  MissedGoalHandling    @default(KEEP) @map("missed_goal_handling")
+  visualization       ProgressVisualization @default(CHARTS)
+
+  // Study sessions for exams (user story: exam study time)
+  studyDaysBeforeExam  Int @default(3) @map("study_days_before_exam")
+  studySessionHours    Int @default(1) @map("study_session_hours")
+  studySessionsPerDay  Int @default(1) @map("study_sessions_per_day")
+  /// Hours of the day (0-24) in which study sessions may be scheduled.
+  studyWindowStartHour Int @default(16) @map("study_window_start_hour")
+  studyWindowEndHour   Int @default(21) @map("study_window_end_hour")
+
+  // Privacy and account management
+  backup                   BackupPreference @default(AUTOMATIC)
+  deleteCompleted          Boolean          @default(true) @map("delete_completed")
+  deleteCompletedAfterDays Int              @default(30) @map("delete_completed_after_days")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}
+
+/// Default reminder frequency and delivery channel per priority level.
+model PriorityReminderRule {
+  id              String              @id @default(uuid()) @db.Uuid
+  userId          String              @map("user_id") @db.Uuid
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  priority        Priority
+  /// 0-24 reminders per day for items of this priority.
+  remindersPerDay Int                 @map("reminders_per_day")
+  channel         NotificationChannel @default(IN_APP)
+
+  @@unique([userId, priority])
+  @@map("priority_reminder_rules")
+}
+
+/// Open time slots used to redistribute missed tasks.
+model AvailabilityWindow {
+  id          String @id @default(uuid()) @db.Uuid
+  userId      String @map("user_id") @db.Uuid
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 0 = Sunday ... 6 = Saturday
+  weekday     Int
+  /// Minutes since midnight, start < end, end <= 1440.
+  startMinute Int    @map("start_minute")
+  endMinute   Int    @map("end_minute")
+
+  @@index([userId, weekday])
+  @@map("availability_windows")
+}
+
+// ---------------------------------------------------------------------------
+// Goals
+// ---------------------------------------------------------------------------
+
+model Goal {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Parent must be a larger tier (BIG > MEDIUM > SMALL); enforced in server/services/goalService.ts.
+  /// Deleting a parent keeps its children as standalone goals.
+  parentGoalId String?       @map("parent_goal_id") @db.Uuid
+  parentGoal   Goal?         @relation("GoalHierarchy", fields: [parentGoalId], references: [id], onDelete: SetNull)
+  childGoals   Goal[]        @relation("GoalHierarchy")
+  title        String        @db.VarChar(150)
+  size         GoalSize
+  category     GoalCategory?
+  description  String?
+  priority     Priority      @default(NONE)
+  startDate    DateTime?     @map("start_date") @db.Date
+  targetDate   DateTime?     @map("target_date") @db.Date
+  status       GoalStatus    @default(ACTIVE)
+  completedAt  DateTime?     @map("completed_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  milestones    Milestone[]
+  tasks         Task[]
+  plannerEvents PlannerEvent[]
+
+  @@index([userId, size])
+  @@index([parentGoalId])
+  @@map("goals")
+}
+
+model Milestone {
+  id          String    @id @default(uuid()) @db.Uuid
+  goalId      String    @map("goal_id") @db.Uuid
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(150)
+  dueDate     DateTime? @map("due_date") @db.Date
+  completedAt DateTime? @map("completed_at")
+  sortOrder   Int       @map("sort_order")
+
+  @@index([goalId, sortOrder])
+  @@map("milestones")
+}
+
+// ---------------------------------------------------------------------------
+// Tasks (To-Do list, Priority setter, Weekly Review)
+// Kept separate from PlannerEvent by team decision; revisit later.
+// ---------------------------------------------------------------------------
+
+model Task {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @map("user_id") @db.Uuid
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId           String?         @map("goal_id") @db.Uuid
+  goal             Goal?           @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  title            String          @db.VarChar(200)
+  category         String          @default("General") @db.VarChar(50)
+  priority         Priority        @default(NONE)
+  dueDate          DateTime?       @map("due_date") @db.Date
+  /// Set the first time the task is rescheduled, so the original deadline stays visible.
+  originalDueDate  DateTime?       @map("original_due_date") @db.Date
+  completed        Boolean         @default(false)
+  /// Set only when completed = true.
+  completedDate    DateTime?       @map("completed_date") @db.Date
+  isExam           Boolean         @default(false) @map("is_exam")
+  /// 0-24; null means "use the PriorityReminderRule for this task's priority".
+  remindersPerDay  Int?            @map("reminders_per_day")
+  inBacklog        Boolean         @default(false) @map("in_backlog")
+  recurrenceRuleId String?         @map("recurrence_rule_id") @db.Uuid
+  recurrenceRule   RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id], onDelete: SetNull)
+  /// Shared by every occurrence of a repeating task.
+  seriesId         String?         @map("series_id") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  studySessions PlannerEvent[] @relation("StudySessions")
+  notifications Notification[]
+
+  @@index([userId, dueDate])
+  @@index([userId, completed])
+  @@index([goalId])
+  @@index([seriesId])
+  @@map("tasks")
+}
+
+// ---------------------------------------------------------------------------
+// Planner events (Visual Planner)
+// ---------------------------------------------------------------------------
+
+model PlannerEvent {
+  id                String          @id @default(uuid()) @db.Uuid
+  userId            String          @map("user_id") @db.Uuid
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId            String?         @map("goal_id") @db.Uuid
+  goal              Goal?           @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  /// "Connect to" another planner task.
+  linkedEventId     String?         @map("linked_event_id") @db.Uuid
+  linkedEvent       PlannerEvent?   @relation("LinkedEvents", fields: [linkedEventId], references: [id], onDelete: SetNull)
+  linkedFrom        PlannerEvent[]  @relation("LinkedEvents")
+  /// Set when this event is a study session generated for an exam task.
+  sourceTaskId      String?         @map("source_task_id") @db.Uuid
+  sourceTask        Task?           @relation("StudySessions", fields: [sourceTaskId], references: [id], onDelete: SetNull)
+  title             String          @db.VarChar(200)
+  category          PlannerCategory @default(WORK)
+  taskType          PlannerTaskType @default(PROJECT) @map("task_type")
+  goalSize          GoalSize        @default(MEDIUM) @map("goal_size")
+  priority          Priority        @default(NONE)
+  status            EventStatus     @default(NOT_STARTED)
+  eventDate         DateTime        @map("event_date") @db.Date
+  originalEventDate DateTime?       @map("original_event_date") @db.Date
+  /// 0-23, and startHour + durationHours <= 24.
+  startHour         Int             @map("start_hour")
+  durationHours     Int             @default(1) @map("duration_hours")
+  description       String?
+  notes             String?
+  remindersPerDay   Int?            @map("reminders_per_day")
+  recurrenceRuleId  String?         @map("recurrence_rule_id") @db.Uuid
+  recurrenceRule    RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id], onDelete: SetNull)
+  seriesId          String?         @map("series_id") @db.Uuid
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  notifications Notification[]
+
+  @@index([userId, eventDate])
+  @@index([userId, priority])
+  @@index([sourceTaskId])
+  @@index([seriesId])
+  @@map("planner_events")
+}
+
+/// Repeating tasks and events. Occurrences are stored as separate rows that share a seriesId.
+model RecurrenceRule {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @map("user_id") @db.Uuid
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  frequency      RecurrenceFrequency
+  intervalCount  Int                 @default(1) @map("interval_count")
+  /// Bitmask for WEEKLY rules: bit 0 = Sunday ... bit 6 = Saturday (1-127).
+  weekdays       Int?
+  endsOn         DateTime?           @map("ends_on") @db.Date
+  maxOccurrences Int?                @map("max_occurrences")
+
+  tasks         Task[]
+  plannerEvents PlannerEvent[]
+
+  @@map("recurrence_rules")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications and weekly reviews
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @map("user_id") @db.Uuid
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// At most one of taskId / plannerEventId is set (CHECK in migration).
+  taskId         String?             @map("task_id") @db.Uuid
+  task           Task?               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  plannerEventId String?             @map("planner_event_id") @db.Uuid
+  plannerEvent   PlannerEvent?       @relation(fields: [plannerEventId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  channel        NotificationChannel @default(IN_APP)
+  scheduledFor   DateTime            @map("scheduled_for")
+  deliveredAt    DateTime?           @map("delivered_at")
+  readAt         DateTime?           @map("read_at")
+
+  @@index([userId, scheduledFor])
+  @@index([taskId])
+  @@index([plannerEventId])
+  @@map("notifications")
+}
+
+/// Optional saved snapshot and reflection for a week. Live review data is computed from tasks.
+model WeeklyReview {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart      DateTime  @map("week_start") @db.Date
+  reflection     String?
+  completedCount Int       @default(0) @map("completed_count")
+  pendingCount   Int       @default(0) @map("pending_count")
+  overdueCount   Int       @default(0) @map("overdue_count")
+  reviewedAt     DateTime? @map("reviewed_at")
+
+  @@unique([userId, weekStart])
+  @@map("weekly_reviews")
+}
