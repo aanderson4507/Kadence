@@ -8,17 +8,26 @@
   background: #f8f9f7;
 }
 
-.breakdown-page__title {
+.breakdown-page__header h1,
+.breakdown-summary__identity h2,
+.breakdown-summary__identity p,
+.breakdown-card__heading h2,
+.breakdown-card__heading p,
+.breakdown-progress__copy h3,
+.breakdown-progress__copy p {
   margin: 0;
+}
+
+.breakdown-page__header h1 {
   font-size: 28px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 34px;
 }
 
 .breakdown-summary,
 .breakdown-card {
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
 }
 
@@ -43,22 +52,15 @@
   gap: 6px;
 }
 
-.breakdown-summary__identity h2,
-.breakdown-summary__identity p,
-.breakdown-card__heading h2,
-.breakdown-card__heading p,
-.breakdown-progress__copy h3,
-.breakdown-progress__copy p {
-  margin: 0;
-}
-
 .breakdown-summary__identity h2 {
   font-size: 24px;
   font-weight: 600;
   line-height: 32px;
 }
 
-.breakdown-summary__identity p {
+.breakdown-summary__identity p,
+.breakdown-progress__copy p,
+.breakdown-card__heading p {
   color: var(--color-muted);
   font-size: 16px;
   line-height: 24px;
@@ -72,7 +74,7 @@
   background: var(--color-brand-soft);
   font-size: 12px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 15px;
 }
 
 .breakdown-metrics {
@@ -94,17 +96,13 @@
   color: var(--color-muted);
   font-size: 11px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 13px;
 }
 
 .breakdown-metrics strong {
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.3;
-}
-
-.breakdown-metrics > div:last-child strong {
-  font-weight: 600;
+  line-height: 17px;
 }
 
 .breakdown-progress {
@@ -124,41 +122,20 @@
 }
 
 .breakdown-gauge__track,
-.breakdown-gauge__arc {
+.breakdown-gauge__dynamic-arc {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   display: block;
 }
 
 .breakdown-gauge__dynamic-arc {
-  position: absolute;
-  inset: 0;
   clip-path: inset(0 0 50%);
   background: conic-gradient(
     from 270deg at 50% 50%,
     var(--color-brand) 0deg var(--progress-angle),
     transparent var(--progress-angle) 360deg
   );
-  mask: radial-gradient(
-    circle closest-side,
-    transparent 83%,
-    #000 84% 99%,
-    transparent 100%
-  );
-  opacity: 0;
-}
-
-.breakdown-gauge[data-progress="60"] .breakdown-gauge__dynamic-arc {
-  opacity: 0;
-}
-
-.breakdown-gauge:not([data-progress="60"]) .breakdown-gauge__arc {
-  opacity: 0;
-}
-
-.breakdown-gauge:not([data-progress="60"]) .breakdown-gauge__dynamic-arc {
-  opacity: 1;
+  mask: radial-gradient(circle closest-side, transparent 83%, #000 84% 99%, transparent 100%);
 }
 
 .breakdown-gauge__label {
@@ -173,13 +150,13 @@
 .breakdown-gauge__label strong {
   font-size: 32px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 39px;
 }
 
 .breakdown-gauge__label span {
   color: var(--color-muted);
   font-size: 12px;
-  line-height: 1.2;
+  line-height: 15px;
 }
 
 .breakdown-progress__details {
@@ -199,13 +176,7 @@
 .breakdown-progress__copy h3 {
   font-size: 18px;
   font-weight: 600;
-  line-height: 1.3;
-}
-
-.breakdown-progress__copy p {
-  color: var(--color-muted);
-  font-size: 16px;
-  line-height: 24px;
+  line-height: 22px;
 }
 
 .breakdown-progress__stats {
@@ -215,6 +186,7 @@
 }
 
 .breakdown-progress__stats > div {
+  min-height: 63px;
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -224,7 +196,7 @@
 .breakdown-progress__stats strong {
   font-size: 18px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 22px;
 }
 
 .breakdown-lower {
@@ -251,34 +223,30 @@
 .breakdown-card__heading h2 {
   font-size: 18px;
   font-weight: 600;
-  line-height: 1.3;
-}
-
-.breakdown-card__heading p {
-  color: var(--color-muted);
-  font-size: 16px;
-  line-height: 24px;
+  line-height: 22px;
 }
 
 .breakdown-milestones,
 .breakdown-goal-group__list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .breakdown-milestone {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: #fff;
 }
 
-.breakdown-milestone--completed {
+.breakdown-milestone--completed,
+.breakdown-connected-goal {
   background: #f8f9f7;
 }
 
@@ -308,7 +276,7 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   line-height: 1.2;
 }
 
@@ -329,7 +297,7 @@
 .breakdown-goal-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .breakdown-goal-group h3 {
@@ -337,7 +305,7 @@
   color: var(--color-brand);
   font-size: 11px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 13px;
   text-transform: uppercase;
 }
 
@@ -345,7 +313,6 @@
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #f8f9f7;
 }
 
 .breakdown-connected-goal h4,
@@ -356,7 +323,7 @@
 .breakdown-connected-goal h4 {
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 18px;
 }
 
 .breakdown-connected-goal p {
@@ -383,10 +350,6 @@
     padding: 20px;
   }
 
-  .breakdown-summary__identity h2 {
-    font-size: 21px;
-  }
-
   .breakdown-progress {
     flex-direction: column;
     align-items: stretch;
@@ -398,7 +361,7 @@
 }
 
 @media (max-width: 480px) {
-  .breakdown-page__title {
+  .breakdown-page__header h1 {
     font-size: 24px;
   }
 
@@ -406,151 +369,34 @@
     flex-direction: column;
   }
 
-  .breakdown-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+  .breakdown-metrics,
   .breakdown-progress__stats {
-    gap: 8px;
-  }
-
-  .breakdown-progress__stats > div {
-    padding: 8px;
-  }
-
-  .breakdown-progress__stats span {
-    font-size: 10px;
-  }
-
-  .breakdown-progress__stats strong {
-    font-size: 16px;
-  }
-
-  .breakdown-card__heading p,
-  .breakdown-connected-goal p {
-    font-size: 14px;
-    line-height: 21px;
+    grid-template-columns: 1fr;
   }
 }
 
-/* Weekly Review */
-
-.weekly-review-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
-  gap: 20px;
-}
-
-.weekly-review-column {
-  min-width: 0;
-}
-
-.weekly-review-task-list {
+.breakdown-goal-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-top: 16px;
 }
 
-.weekly-review-task {
+.breakdown-goal-item {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--color-border);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e7e0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.breakdown-goal-priority {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 10px;
   border-radius: 6px;
-  background: #f8f9f7;
-}
-
-.weekly-review-task > div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.weekly-review-task strong {
-  overflow-wrap: anywhere;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.weekly-review-task > div > span {
-  color: var(--color-muted);
-  font-size: 12px;
-}
-
-.weekly-review-tag {
-  flex: 0 0 auto;
-  padding: 5px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.weekly-review-tag--completed {
-  color: #34754c;
-  background: #e5f2e8;
-}
-
-.weekly-review-tag--pending {
-  color: #98702c;
-  background: #fff3d9;
-}
-
-.weekly-review-tag--overdue {
-  color: #b44343;
-  background: #fde9e9;
-}
-
-.weekly-review-empty {
-  margin: 0;
-  padding: 16px 10px;
-  color: var(--color-muted);
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.weekly-review-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.weekly-review-progress__labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-.weekly-review-progress__labels strong {
-  font-weight: 600;
-}
-
-.weekly-review-progress__track {
-  height: 10px;
-  overflow: hidden;
-  border-radius: 20px;
-  background: #e9ece8;
-}
-
-.weekly-review-progress__fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--color-brand);
-  transition: width 0.3s ease;
-}
-
-@media (max-width: 900px) {
-  .weekly-review-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 600px) {
-  .weekly-review-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  background: #edf1e9;
 }
