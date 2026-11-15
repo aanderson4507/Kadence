@@ -1,0 +1,14 @@
+.quick-setup { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1000px; margin: 0 auto; color: inherit; }
+.quick-setup h1 { margin: 0; }
+.quick-setup p { margin: 8px 0; }
+.quick-setup label { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.quick-setup fieldset { display: grid; grid-template-columns: 2fr 1.4fr 1fr 1fr auto; gap: 12px; align-items: end; border: 1px solid #8b9b90; border-radius: 12px; padding: 16px; }
+.quick-setup input, .quick-setup select, .quick-setup button, .dashboard-quick-setup { min-height: 44px; border: 1px solid #8b9b90; border-radius: 8px; padding: 10px 12px; font: inherit; color: inherit; background: transparent; }
+.quick-setup button, .dashboard-quick-setup { cursor: pointer; }
+.quick-setup button:disabled { opacity: .45; cursor: default; }
+.quick-setup footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.quick-setup .quick-setup-primary, .dashboard-quick-setup { background: #39765a; color: white; border-color: #39765a; }
+.dashboard-quick-setup { margin: 16px 24px; align-self: flex-start; }
+.quick-setup input:focus-visible, .quick-setup select:focus-visible, .quick-setup button:focus-visible, .dashboard-quick-setup:focus-visible { outline: 3px solid #76b9e0; outline-offset: 3px; }
+@media (max-width: 800px) { .quick-setup fieldset { grid-template-columns: 1fr 1fr; } .quick-setup fieldset label:first-of-type { grid-column: 1 / -1; } }
+@media (max-width: 450px) { .quick-setup fieldset { grid-template-columns: 1fr; } }

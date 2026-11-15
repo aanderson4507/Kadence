@@ -5,11 +5,12 @@ import {
   type FormEvent,
 } from "react";
 import "./VisualPlanner.css";
+import QuickSetup, { type QuickTask } from "./QuickSetup";
 
 type PlannerCategory = "Personal" | "Focus" | "Wellbeing" | "Work";
 type PlannerStatus = "Not started" | "In progress" | "Done";
 type PlannerView = "Week" | "Day";
-type PlannerScreen = "planner" | "add" | "edit";
+type PlannerScreen = "planner" | "add" | "edit" | "quick";
 type GoalSize = "Small" | "Medium" | "Big";
 type PlannerTaskType = "Project" | "Task" | "Habit";
 
@@ -253,8 +254,10 @@ function formatDuration(duration: number) {
 
 function VisualPlanner({
   onDataChange,
+  quickSetupRequest = 0,
 }: {
   onDataChange: (events: unknown[]) => void;
+  quickSetupRequest?: number;
 }) {
   const [events, setEvents] = useState(initialEvents);
   const [weekStart, setWeekStart] = useState(initialWeekStart);
@@ -270,6 +273,24 @@ function VisualPlanner({
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (quickSetupRequest > 0) setScreen("quick");
+  }, [quickSetupRequest]);
+
+  function saveQuickTasks(tasks: QuickTask[]) {
+    const additions: PlannerEvent[] = tasks.map((task) => ({
+      ...createEmptyDraft(task.date), ...task, id: `planner-event-${crypto.randomUUID()}`,
+      taskType: "Task",
+    }));
+    setEvents((current) => [...current, ...additions]);
+    setWeekStart(getMonday(dateFromKey(additions[0].date)));
+    setFocusedDate(additions[0].date);
+    setSelectedEventId(additions[0].id);
+    setView("Week");
+    setScreen("planner");
+    setSaveMessage(`${additions.length} ${additions.length === 1 ? "task added" : "tasks added"} to your week.`);
+  }
 
   const selectedEvent =
     events.find((event) => event.id === selectedEventId) ?? null;
@@ -415,7 +436,9 @@ function VisualPlanner({
       aria-label="Visual planner"
       className={`visual-planner${screen !== "planner" ? " visual-planner--form" : ""}${screen === "edit" ? " visual-planner--edit" : ""}`}
     >
-      {screen === "planner" ? (
+      {screen === "quick" ? (
+        <QuickSetup key={quickSetupRequest} onSave={saveQuickTasks} onCancel={cancelTaskForm} />
+      ) : screen === "planner" ? (
         <>
       <header className="planner-header">
         <div className="planner-header__intro">

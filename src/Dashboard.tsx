@@ -63,6 +63,18 @@ function Dashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenu, setOpenMenu] = useState<UtilityMenu>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [quickSetupRequest, setQuickSetupRequest] = useState(0);
+
+  function openQuickSetup() {
+    setViews((current) => current.some((view) => view.label === "Visual Planner")
+      ? current : [...current, initialViews.find((view) => view.label === "Visual Planner")!]);
+    setSettingsOpen(false);
+    setOpenMenu(null);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setActiveView("Visual Planner");
+    setQuickSetupRequest((current) => current + 1);
+  }
   const [showWeeklyReviewReminder, setShowWeeklyReviewReminder] =
   useState(false);
 
@@ -230,7 +242,7 @@ useEffect(() => {
       case "Priority":
         return <PrioritySetter tasks={tasks} setTasks={setTasks} />;
       case "Visual Planner":
-        return <VisualPlanner onDataChange={setPlannerEventsForExport} />;
+        return <VisualPlanner onDataChange={setPlannerEventsForExport} quickSetupRequest={quickSetupRequest} />;
       default:
         return null;
     }
@@ -458,6 +470,10 @@ useEffect(() => {
         )}
       </header>
 
+      <button className="dashboard-quick-setup" type="button" onClick={openQuickSetup}>
+        <span aria-hidden="true">＋ </span>Quick Setup
+      </button>
+
       <nav aria-label="Workspace views" className="workspace-tabs" hidden={settingsOpen}>
         {visibleViews.map((view) => (
           <div
@@ -511,7 +527,6 @@ useEffect(() => {
         )}
       </nav>
 
-<<<<<<< HEAD
       <div
         className={`workspace-panels${isPanelLayout ? " workspace-panels--resizable" : ""}`}
         hidden={settingsOpen || panelViews.length === 0}
@@ -561,31 +576,7 @@ useEffect(() => {
             );
           })}
         </div>
-=======
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "To do"}>
-        <TodoList tasks={tasks} setTasks={setTasks} />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Breakdown"}>
-        <Breakdown tasks={tasks} goals={goalsForExport} />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Goals"}>
-        <Goals
-          activeView={activeView}
-          onDataChange={setGoalsForExport}
-          onOpenBreakdown={() => setActiveView("Breakdown")}
-          onOpenSettings={() => {
-            setSettingsOpen(true);
-            setOpenMenu(null);
-          }}
-          onSelectView={setActiveView}
-        />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Priority"}>
-        <PrioritySetter tasks={tasks} setTasks={setTasks} />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Visual Planner"}>
-        <VisualPlanner onDataChange={setPlannerEventsForExport} />
->>>>>>> d1d18b51ac220d0d930c86701ee27f3cab793787
+
       </div>
       <div className="dashboard-content" hidden={!settingsOpen}>
         <Settings
