@@ -41,6 +41,18 @@ function Dashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenu, setOpenMenu] = useState<UtilityMenu>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [quickSetupRequest, setQuickSetupRequest] = useState(0);
+
+  function openQuickSetup() {
+    setViews((current) => current.some((view) => view.label === "Visual Planner")
+      ? current : [...current, initialViews.find((view) => view.label === "Visual Planner")!]);
+    setSettingsOpen(false);
+    setOpenMenu(null);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setActiveView("Visual Planner");
+    setQuickSetupRequest((current) => current + 1);
+  }
   const [showWeeklyReviewReminder, setShowWeeklyReviewReminder] =
   useState(false);
 
@@ -313,6 +325,10 @@ useEffect(() => {
         )}
       </header>
 
+      <button className="dashboard-quick-setup" type="button" onClick={openQuickSetup}>
+        <span aria-hidden="true">＋ </span>Quick Setup
+      </button>
+
       <nav aria-label="Workspace views" className="workspace-tabs" hidden={settingsOpen}>
         {visibleViews.map((view) => (
           <div
@@ -378,7 +394,7 @@ useEffect(() => {
         <PrioritySetter tasks={tasks} setTasks={setTasks} />
       </div>
       <div className="dashboard-content" hidden={settingsOpen || activeView !== "Visual Planner"}>
-        <VisualPlanner onDataChange={setPlannerEventsForExport} />
+        <VisualPlanner onDataChange={setPlannerEventsForExport} quickSetupRequest={quickSetupRequest} />
       </div>
       <div className="dashboard-content" hidden={!settingsOpen}>
         <Settings
