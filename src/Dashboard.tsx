@@ -8,7 +8,7 @@ import {
 } from "react";
 import "./App.css";
 import Breakdown from "./Breakdown";
-import Goals from "./Goals";
+import Goals, { type Goal } from "./Goals";
 import PrioritySetter from "./PrioritySetter";
 import Settings from "./Settings";
 import TodoList, { initialTasks, type Task } from "./TodoList";
@@ -109,7 +109,7 @@ useEffect(() => {
   return daysUntilDue >= 0 && daysUntilDue <= 7;
 });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [goalsForExport, setGoalsForExport] = useState<unknown[]>([]);
+  const [goalsForExport, setGoalsForExport] = useState<Goal[]>([]);
   const [plannerEventsForExport, setPlannerEventsForExport] = useState<unknown[]>([]);
 
   const visibleViews = views.filter((view) =>
@@ -511,6 +511,7 @@ useEffect(() => {
         )}
       </nav>
 
+<<<<<<< HEAD
       <div
         className={`workspace-panels${isPanelLayout ? " workspace-panels--resizable" : ""}`}
         hidden={settingsOpen || panelViews.length === 0}
@@ -560,6 +561,31 @@ useEffect(() => {
             );
           })}
         </div>
+=======
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "To do"}>
+        <TodoList tasks={tasks} setTasks={setTasks} />
+      </div>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Breakdown"}>
+        <Breakdown tasks={tasks} goals={goalsForExport} />
+      </div>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Goals"}>
+        <Goals
+          activeView={activeView}
+          onDataChange={setGoalsForExport}
+          onOpenBreakdown={() => setActiveView("Breakdown")}
+          onOpenSettings={() => {
+            setSettingsOpen(true);
+            setOpenMenu(null);
+          }}
+          onSelectView={setActiveView}
+        />
+      </div>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Priority"}>
+        <PrioritySetter tasks={tasks} setTasks={setTasks} />
+      </div>
+      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Visual Planner"}>
+        <VisualPlanner onDataChange={setPlannerEventsForExport} />
+>>>>>>> d1d18b51ac220d0d930c86701ee27f3cab793787
       </div>
       <div className="dashboard-content" hidden={!settingsOpen}>
         <Settings

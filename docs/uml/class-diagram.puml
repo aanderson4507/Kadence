@@ -1,0 +1,300 @@
+@startuml kadence-class-diagram
+' Kadence domain model. Mirrors prisma/schema.prisma.
+' Smetana layout so the diagram renders without Graphviz installed.
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FBFAF7
+  BorderColor #406B51
+  ArrowColor #406B51
+}
+skinparam note {
+  BackgroundColor #F3F7F4
+  BorderColor #9DB8A6
+}
+
+title Kadence — UML Class Diagram (PostgreSQL + Prisma)
+
+package "Account" {
+  class User {
+    <<PK>> id : UUID
+    {field} <<unique>> username : String(50)
+    {field} <<unique>> email : String(255)
+    {field} passwordHash : String(255)
+    {field} firstName : String(100) [0..1]
+    {field} lastName : String(100) [0..1]
+    {field} school : String(150) [0..1]
+    {field} major : String(150) [0..1]
+    graduationDate : Date [0..1]
+    careerInterests : Text [0..1]
+    careerGoals : Text [0..1]
+    {field} avatarUrl : String(500) [0..1]
+    createdAt : DateTime
+    updatedAt : DateTime
+  }
+
+  class UserSettings {
+    <<PK, FK>> userId : UUID
+    theme : ThemePreference
+    {field} accentColor : String(7)
+    plannerView : PlannerViewPreference
+    weekStart : WeekStart
+    timeFormat : TimeFormat
+    landingPage : LandingPage
+    dashboardMode : DashboardMode
+    tabLayout : Json [0..1]
+    {field} remindDailyPlanning .. remindMissedGoal : Boolean (x6)
+    quietStartMinute : Int [0..1] {0..1439}
+    quietEndMinute : Int [0..1] {0..1439}
+    goalTimeframe : GoalTimeframe
+    goalCategory : GoalCategory
+    goalBreakdown : GoalBreakdownMethod
+    goalPriority : Priority
+    celebration : CelebrationStyle
+    progressMetric : ProgressMetric
+    unfinishedBehavior : UnfinishedTaskBehavior
+    unfinishedReviewTime : UnfinishedReviewTime
+    deadlineHandling : DeadlineHandling
+    autoReschedule : Boolean
+    rescheduleHighOnly : Boolean
+    rescheduleExcludeOverdue : Boolean
+    dailyLimit : Int {0..20}
+    warnOverload : Boolean
+    reprioritizeWhenFull : Boolean
+    reviewDay : Int {0..6}
+    reviewReminder : Boolean
+    reviewMinute : Int {0..1439}
+    reviewSummaryItems : Json
+    reflectionQuestions : Boolean
+    missedGoalHandling : MissedGoalHandling
+    visualization : ProgressVisualization
+    studyDaysBeforeExam : Int {1..30}
+    studySessionHours : Int {1..8}
+    studySessionsPerDay : Int {1..6}
+    studyWindowStartHour : Int {0..23}
+    studyWindowEndHour : Int {1..24}
+    backup : BackupPreference
+    deleteCompleted : Boolean
+    deleteCompletedAfterDays : Int {1..365}
+    updatedAt : DateTime
+  }
+
+  class PriorityReminderRule {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    priority : Priority
+    remindersPerDay : Int {0..24}
+    channel : NotificationChannel
+    --
+    {unique (userId, priority)}
+  }
+
+  class AvailabilityWindow {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    weekday : Int {0..6}
+    startMinute : Int {0..1439}
+    endMinute : Int {1..1440}
+    --
+    {startMinute < endMinute}
+  }
+}
+
+package "Goals" {
+  class Goal {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    <<FK>> parentGoalId : UUID [0..1]
+    {field} title : String(150)
+    size : GoalSize
+    category : GoalCategory [0..1]
+    description : Text [0..1]
+    priority : Priority
+    startDate : Date [0..1]
+    targetDate : Date [0..1]
+    status : GoalStatus
+    completedAt : DateTime [0..1]
+    createdAt : DateTime
+    updatedAt : DateTime
+    --
+    {targetDate >= startDate}
+    {completedAt set <=> status = COMPLETED}
+    {parent.size larger than size}
+    / progress : Int {derived, 0..100}
+  }
+
+  class Milestone {
+    <<PK>> id : UUID
+    <<FK>> goalId : UUID
+    {field} title : String(150)
+    dueDate : Date [0..1]
+    completedAt : DateTime [0..1]
+    sortOrder : Int {>= 1}
+  }
+}
+
+package "Work items" {
+  class Task {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    <<FK>> goalId : UUID [0..1]
+    <<FK>> recurrenceRuleId : UUID [0..1]
+    {field} title : String(200)
+    {field} category : String(50)
+    priority : Priority
+    dueDate : Date [0..1]
+    originalDueDate : Date [0..1]
+    completed : Boolean
+    completedDate : Date [0..1]
+    isExam : Boolean
+    remindersPerDay : Int [0..1] {0..24}
+    inBacklog : Boolean
+    seriesId : UUID [0..1]
+    createdAt : DateTime
+    updatedAt : DateTime
+    --
+    {completedDate set <=> completed}
+  }
+
+  class PlannerEvent {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    <<FK>> goalId : UUID [0..1]
+    <<FK>> linkedEventId : UUID [0..1]
+    <<FK>> sourceTaskId : UUID [0..1]
+    <<FK>> recurrenceRuleId : UUID [0..1]
+    {field} title : String(200)
+    category : PlannerCategory
+    taskType : PlannerTaskType
+    goalSize : GoalSize
+    priority : Priority
+    status : EventStatus
+    eventDate : Date
+    originalEventDate : Date [0..1]
+    startHour : Int {0..23}
+    durationHours : Int {1..24}
+    description : Text [0..1]
+    notes : Text [0..1]
+    remindersPerDay : Int [0..1] {0..24}
+    seriesId : UUID [0..1]
+    createdAt : DateTime
+    updatedAt : DateTime
+    --
+    {startHour + durationHours <= 24}
+    {linkedEventId <> id}
+  }
+
+  class RecurrenceRule {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    frequency : RecurrenceFrequency
+    intervalCount : Int {>= 1}
+    weekdays : Int [0..1] {bitmask 1..127}
+    endsOn : Date [0..1]
+    maxOccurrences : Int [0..1] {>= 1}
+    --
+    {not both endsOn and maxOccurrences}
+  }
+}
+
+package "Reminders and reviews" {
+  class Notification {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    <<FK>> taskId : UUID [0..1]
+    <<FK>> plannerEventId : UUID [0..1]
+    type : NotificationType
+    channel : NotificationChannel
+    scheduledFor : DateTime
+    deliveredAt : DateTime [0..1]
+    readAt : DateTime [0..1]
+    --
+    {not both taskId and plannerEventId}
+  }
+
+  class WeeklyReview {
+    <<PK>> id : UUID
+    <<FK>> userId : UUID
+    weekStart : Date
+    reflection : Text [0..1]
+    completedCount : Int {>= 0}
+    pendingCount : Int {>= 0}
+    overdueCount : Int {>= 0}
+    reviewedAt : DateTime [0..1]
+    --
+    {unique (userId, weekStart)}
+  }
+}
+
+package "Enumerations" {
+  enum Priority {
+    VERY_HIGH
+    HIGH
+    MEDIUM
+    LOW
+    VERY_LOW
+    NONE
+  }
+  enum GoalSize {
+    BIG
+    MEDIUM
+    SMALL
+  }
+  enum GoalStatus {
+    ACTIVE
+    COMPLETED
+    ARCHIVED
+  }
+  enum EventStatus {
+    NOT_STARTED
+    IN_PROGRESS
+    DONE
+  }
+  enum PlannerCategory {
+    PERSONAL
+    FOCUS
+    WELLBEING
+    WORK
+  }
+  enum NotificationType {
+    DAILY_PLANNING
+    UPCOMING_TASK
+    DEADLINE
+    GOAL_PROGRESS
+    WEEKLY_REVIEW
+    MISSED_GOAL
+  }
+}
+
+' ---- Relationships (multiplicity on each end) ----
+User "1" *-- "0..1" UserSettings : configures >
+User "1" *-- "0..6" PriorityReminderRule : sets >
+User "1" *-- "0..*" AvailabilityWindow : defines >
+User "1" *-- "0..*" Goal : owns >
+User "1" *-- "0..*" Task : owns >
+User "1" *-- "0..*" PlannerEvent : owns >
+User "1" *-- "0..*" RecurrenceRule : defines >
+User "1" *-- "0..*" Notification : receives >
+User "1" *-- "0..*" WeeklyReview : writes >
+
+Goal "0..1" o-- "0..*" Goal : parent of >
+Goal "1" *-- "0..*" Milestone : contains >
+Goal "0..1" o-- "0..*" Task : groups >
+Goal "0..1" o-- "0..*" PlannerEvent : groups >
+
+PlannerEvent "0..1" o-- "0..*" PlannerEvent : linked from >
+Task "0..1" o-- "0..*" PlannerEvent : study sessions >
+RecurrenceRule "0..1" o-- "0..*" Task : repeats >
+RecurrenceRule "0..1" o-- "0..*" PlannerEvent : repeats >
+Task "0..1" *-- "0..*" Notification : triggers >
+PlannerEvent "0..1" *-- "0..*" Notification : triggers >
+
+note bottom of Goal
+  Composition (filled diamond) = child rows deleted with the owner (ON DELETE CASCADE).
+  Aggregation (hollow diamond) = foreign key set to NULL when the owner is deleted.
+  Deleting a parent goal keeps its child goals as standalone goals.
+end note
+
+@enduml

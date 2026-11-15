@@ -1,9 +1,11 @@
 import { useState, type CSSProperties } from "react";
 import "./Breakdown.css";
 import type { Task } from "./TodoList";
+import type { Goal } from "./Goals";
 
 type BreakdownProps = {
   tasks: Task[];
+  goals: Goal[];
 };
 
 type ProgressStyle = CSSProperties & {
@@ -46,7 +48,7 @@ const connectedGoals = [
   },
 ];
 
-function Breakdown({ tasks: _tasks }: BreakdownProps) {
+function Breakdown({ tasks: _tasks, goals }: BreakdownProps) {
   const [milestones, setMilestones] = useState(initialMilestones);
   const completedCount = milestones.filter((milestone) => milestone.completed).length;
   const progress = Math.round((completedCount / milestones.length) * 100);
@@ -187,6 +189,26 @@ function Breakdown({ tasks: _tasks }: BreakdownProps) {
               ))}
             </div>
           </div>
+        </section>
+
+        <section className="breakdown-card">
+          <h2>Goal Priorities</h2>
+          <p>Review the priorities assigned to your current goals.</p>
+
+          {goals.length === 0 ? (
+            <p>No goals have been added yet.</p>
+          ) : (
+            <div className="breakdown-goal-list">
+              {goals.map((goal) => (
+                <div className="breakdown-goal-item" key={goal.id}>
+                  <span>{goal.title}</span>
+                  <span className="breakdown-goal-priority">
+                    {goal.priority ?? "None"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>

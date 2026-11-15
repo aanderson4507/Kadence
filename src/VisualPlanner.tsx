@@ -203,7 +203,7 @@ function formatShortDate(date: Date) {
 }
 
 function formatWeekRange(start: Date) {
-  const end = addDays(start, 7);
+  const end = addDays(start, 6);
   const startMonth = new Intl.DateTimeFormat("en-US", { month: "short" }).format(
     start,
   );
@@ -268,6 +268,8 @@ function VisualPlanner({
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PlannerDraft>(() => createEmptyDraft());
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [formError, setFormError] = useState("");
 
   const selectedEvent =
     events.find((event) => event.id === selectedEventId) ?? null;
@@ -290,24 +292,22 @@ function VisualPlanner({
   const dayViewDate = view === "Day" ? dateFromKey(focusedDate) : null;
 
   function openNewEventPage() {
+    setFormError("");
+    setSaveMessage("");
     setEditingEventId(null);
     setDeleteConfirmationOpen(false);
     const defaultDate =
       view === "Day" || visibleDateKeys.has(focusedDate)
         ? focusedDate
         : toDateKey(weekStart);
-    setDraft({
-      ...createEmptyDraft(defaultDate),
-      linkedEventId:
-        events.find((plannerEvent) => plannerEvent.id === "project-planning")?.id ??
-        events[0]?.id ??
-        null,
-    });
+    setDraft(createEmptyDraft(defaultDate));
     setScreen("add");
   }
 
   function openEditEventPage() {
     if (!selectedEvent) return;
+    setFormError("");
+    setSaveMessage("");
     setEditingEventId(selectedEvent.id);
     setDeleteConfirmationOpen(false);
     setDraft({
@@ -346,7 +346,20 @@ function VisualPlanner({
   function saveEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const title = draft.title.trim();
-    if (!title) return;
+    if (!title) {
+      setFormError("Enter a task name.");
+      return;
+    }
+    if (!draft.date || Number.isNaN(dateFromKey(draft.date).getTime())) {
+      setFormError("Choose a valid date.");
+      return;
+    }
+    if (!Number.isInteger(draft.startHour) || !Number.isInteger(draft.duration) ||
+        draft.startHour < 0 || draft.startHour > 23 || draft.duration < 1 ||
+        draft.startHour + draft.duration > 24) {
+      setFormError("Choose a start time and duration that end by midnight.");
+      return;
+    }
     const savedEvent: PlannerEvent = {
       ...draft,
       title,
@@ -367,6 +380,7 @@ function VisualPlanner({
     setFocusedDate(savedEvent.date);
     setWeekStart(getMonday(dateFromKey(savedEvent.date)));
     setView("Week");
+    setSaveMessage(`${title} ${editingEventId ? "updated" : "added"} in your planner and calendar.`);
     setScreen("planner");
     setEditingEventId(null);
     setDeleteConfirmationOpen(false);
@@ -422,6 +436,7 @@ function VisualPlanner({
       </header>
 
       <section aria-label="Information about Task" className="planner-task-info">
+        <p className="planner-save-message" role="status">{saveMessage}</p>
         <div className="planner-task-info__heading">
           <h2>
             <img alt="" src="/assets/planner-info.svg" />
@@ -649,6 +664,7 @@ function VisualPlanner({
                 </div>
                 <p>A little structure. A little room to breathe.</p>
               </header>
+              {formError && <p className="planner-form-error" role="alert">{formError}</p>}
               <div className="planner-create-card__fields">
                 <label className="planner-create-field planner-create-field--row">
                   <span>Name</span>
@@ -661,13 +677,63 @@ function VisualPlanner({
                   />
                 </label>
                 <label className="planner-create-field planner-create-field--row">
-                  <span>Due Date</span>
+                  <span>Date</span>
                   <input
                     onChange={(event) => updateDraft("date", event.target.value)}
                     required
                     type="date"
                     value={draft.date}
                   />
+                </label>
+                <label className="planner-create-field planner-create-field--row">
+                  <span>Start time</span>
+                  <select
+                    value={draft.startHour}
+                    onChange={(event) => {
+                      const startHour = Number(event.target.value);
+                      setDraft((current) => ({ ...current, startHour, duration: Math.min(current.duration, 24 - startHour) }));
+                    }}
+                  >
+                    {Array.from({ length: 24 }, (_, hour) => (
+                      <option key={hour} value={hour}>{formatTime(hour)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="planner-create-field planner-create-field--row">
+                  <span>Duration</span>
+                  <select value={draft.duration} onChange={(event) => updateDraft("duration", Number(event.target.value))}>
+                    {Array.from({ length: 24 - draft.startHour }, (_, index) => index + 1).map((hours) => (
+                      <option key={hours} value={hours}>{formatDuration(hours)}</option>
+                    ))}
+                  </select>
+                </label>
+                <fieldset className="planner-create-field planner-create-field--stacked">
+                  <legend>Category</legend>
+                  <div className="planner-category-chips">
+                    {plannerCategories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        aria-pressed={draft.category === category}
+                        className={`planner-category-chip planner-category-chip--${categoryClass(category)}${draft.category === category ? " is-selected" : ""}`}
+                        onClick={() => updateDraft("category", category)}
+                      >
+                        <i className={`planner-category-dot planner-category-dot--${categoryClass(category)}`} />
+                        {category}
+                        {draft.category === category && <span aria-hidden="true">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <label className="planner-create-field planner-create-field--row">
+                  <span>Description</span>
+                  <textarea rows={3} value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} placeholder="What would you like to do?" />
+                </label>
+                <label className="planner-create-field planner-create-field--row">
+                  <span>Status</span>
+                  <select value={draft.status} onChange={(event) => updateDraft("status", event.target.value as PlannerStatus)}>
+                    {plannerStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                  </select>
                 </label>
                 <label className="planner-create-field planner-create-field--row">
                   <span>Task Type</span>
@@ -761,6 +827,7 @@ function VisualPlanner({
         </div>
       ) : (
         <form className="planner-edit-page" onSubmit={saveEvent}>
+          {formError && <p className="planner-form-error" role="alert">{formError}</p>}
           <header className="planner-edit-page__header">
             <div>
               <h1>
@@ -1006,7 +1073,7 @@ function createEmptyDraft(date = toDateKey(initialWeekStart)): PlannerDraft {
     status: "Not started",
     taskType: "Project",
     goalSize: "Medium",
-    linkedEventId: "project-planning",
+    linkedEventId: null,
     notes: "",
   };
 }
