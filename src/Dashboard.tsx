@@ -1,18 +1,17 @@
-import {
-  Fragment,
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import "./App.css";
 import Breakdown from "./Breakdown";
 import Goals, { type Goal } from "./Goals";
 import PrioritySetter from "./PrioritySetter";
 import Settings from "./Settings";
+import {
+  DEFAULT_STUDY_PREFERENCES,
+  scheduleStudySessions,
+  type StudyPreferences,
+} from "./studySessions";
+import { todayKey } from "./taskPriority";
 import TodoList, { initialTasks, type Task } from "./TodoList";
-import VisualPlanner from "./VisualPlanner";
+import VisualPlanner, { type PlannerEvent } from "./VisualPlanner";
 
 type View = {
   label: string;
@@ -122,7 +121,19 @@ useEffect(() => {
 });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [goalsForExport, setGoalsForExport] = useState<Goal[]>([]);
-  const [plannerEventsForExport, setPlannerEventsForExport] = useState<unknown[]>([]);
+  const [plannerEvents, setPlannerEvents] = useState<PlannerEvent[]>([]);
+  const [studyPreferences, setStudyPreferences] =
+    useState<StudyPreferences>(DEFAULT_STUDY_PREFERENCES);
+
+  // Study sessions are recalculated whenever exams, study settings or the planner change,
+  // so they always fit around the student's own events.
+  const studyPlan = useMemo(() => {
+    const now = new Date();
+    return scheduleStudySessions(tasks, studyPreferences, plannerEvents, {
+      today: todayKey(now),
+      currentHour: now.getHours() + now.getMinutes() / 60,
+    });
+  }, [tasks, studyPreferences, plannerEvents]);
 
   const visibleViews = views.filter((view) =>
     view.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
@@ -280,7 +291,8 @@ useEffect(() => {
         preferences,
         tasks,
         goals: goalsForExport,
-        plannerEvents: plannerEventsForExport,
+        plannerEvents,
+        studySessions: studyPlan.sessions,
       },
       null,
       2,
@@ -582,6 +594,7 @@ useEffect(() => {
         <Settings
           isDarkMode={isDarkMode}
           onExport={exportKadenceData}
+          onStudyPreferencesChange={setStudyPreferences}
           onThemeChange={onThemeChange}
           themePreference={themePreference}
         />

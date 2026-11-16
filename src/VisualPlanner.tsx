@@ -1,10 +1,12 @@
 import {
   useEffect,
+  useMemo,
   useState,
   type CSSProperties,
   type FormEvent,
 } from "react";
 import "./VisualPlanner.css";
+import type { StudySession } from "./studySessions";
 import QuickSetup, { type QuickTask } from "./QuickSetup";
 
 type PlannerCategory = "Personal" | "Focus" | "Wellbeing" | "Work";
@@ -14,7 +16,7 @@ type PlannerScreen = "planner" | "add" | "edit" | "quick";
 type GoalSize = "Small" | "Medium" | "Big";
 type PlannerTaskType = "Project" | "Task" | "Habit";
 
-type PlannerEvent = {
+export type PlannerEvent = {
   id: string;
   title: string;
   category: PlannerCategory;
@@ -27,6 +29,8 @@ type PlannerEvent = {
   goalSize?: GoalSize;
   linkedEventId?: string | null;
   notes?: string;
+  /** Set on study sessions generated from an exam; these can't be edited here. */
+  studyFor?: { examTitle: string; examDate: string };
 };
 
 type PlannerDraft = Omit<
@@ -252,14 +256,35 @@ function formatDuration(duration: number) {
   return `${duration} ${duration === 1 ? "hour" : "hours"}`;
 }
 
+function studySessionToEvent(session: StudySession): PlannerEvent {
+  return {
+    id: session.id,
+    title: `Study: ${session.examTitle}`,
+    category: "Focus",
+    date: session.date,
+    startHour: session.startHour,
+    duration: session.duration,
+    description: `Study session before ${session.examTitle} on ${formatShortDate(dateFromKey(session.examDate))}.`,
+    status: "Not started",
+    studyFor: { examTitle: session.examTitle, examDate: session.examDate },
+  };
+}
+
 function VisualPlanner({
   onDataChange,
+  studySessions = [],
+}: {
+  onDataChange: (events: PlannerEvent[]) => void;
+  /** Generated from exams; shown alongside the student's own events. */
+  studySessions?: StudySession[];
   quickSetupRequest = 0,
 }: {
   onDataChange: (events: unknown[]) => void;
   quickSetupRequest?: number;
 }) {
   const [events, setEvents] = useState(initialEvents);
+  const studyEvents = useMemo(() => studySessions.map(studySessionToEvent), [studySessions]);
+  const allEvents = useMemo(() => [...events, ...studyEvents], [events, studyEvents]);
   const [weekStart, setWeekStart] = useState(initialWeekStart);
   const [view, setView] = useState<PlannerView>("Week");
   const [focusedDate, setFocusedDate] = useState("2023-08-23");
@@ -293,7 +318,7 @@ function VisualPlanner({
   }
 
   const selectedEvent =
-    events.find((event) => event.id === selectedEventId) ?? null;
+    allEvents.find((event) => event.id === selectedEventId) ?? null;
 
   useEffect(() => {
     onDataChange(events);
@@ -304,9 +329,11 @@ function VisualPlanner({
   const visibleDays =
     view === "Day" ? [dateFromKey(focusedDate)] : weekDays;
   const visibleDateKeys = new Set(visibleDays.map(toDateKey));
-  const visibleEvents = events.filter((event) =>
+  const visibleEvents = allEvents.filter((event) =>
     visibleDateKeys.has(event.date),
   );
+  const nextStudyEvent =
+    studyEvents.find((event) => event.date >= toDateKey(new Date())) ?? null;
   const sortedEvents = [...visibleEvents].sort(
     (first, second) => first.startHour - second.startHour,
   );
@@ -325,7 +352,15 @@ function VisualPlanner({
     setScreen("add");
   }
 
+  function showNextStudySession() {
+    if (!nextStudyEvent) return;
+    setWeekStart(getMonday(dateFromKey(nextStudyEvent.date)));
+    setFocusedDate(nextStudyEvent.date);
+    setSelectedEventId(nextStudyEvent.id);
+  }
+
   function openEditEventPage() {
+    if (!selectedEvent || selectedEvent.studyFor) return;
     if (!selectedEvent) return;
     setFormError("");
     setSaveMessage("");
@@ -484,12 +519,16 @@ function VisualPlanner({
               <li>{selectedEvent.description || "No description added."}</li>
               <li>{formatEventDate(selectedEvent)}</li>
               <li>
-                {selectedEvent.status} ·{" "}
-                {selectedEvent.status === "Done"
-                  ? "Nice work getting this done."
-                  : "Make space for focused work"}
+                {selectedEvent.studyFor
+                  ? "Scheduled automatically from your exam. Change study times in Settings → Exam study sessions."
+                  : `${selectedEvent.status} · ${
+                      selectedEvent.status === "Done"
+                        ? "Nice work getting this done."
+                        : "Make space for focused work"
+                    }`}
               </li>
             </ul>
+            {!selectedEvent.studyFor && (
             <button
               aria-label={`Edit ${selectedEvent.title}`}
               className="planner-edit-button"
@@ -498,6 +537,7 @@ function VisualPlanner({
             >
               <img alt="" src="/assets/planner-edit.svg" />
             </button>
+            )}
           </div>
         ) : (
           <p className="planner-task-info__empty">
@@ -532,6 +572,15 @@ function VisualPlanner({
             </button>
           </div>
           <div className="planner-calendar__tools">
+            {nextStudyEvent && (
+              <button
+                className="planner-study-jump"
+                onClick={showNextStudySession}
+                type="button"
+              >
+                Next study session
+              </button>
+            )}
             <span>
               {visibleEvents.length}{" "}
               {visibleEvents.length === 1 ? "task" : "tasks"} this{" "}
@@ -629,7 +678,7 @@ function VisualPlanner({
                     {dayEvents.map((event) => (
                       <button
                         aria-pressed={selectedEventId === event.id}
-                        className={`planner-event planner-event--${categoryClass(event.category)}${selectedEventId === event.id ? " planner-event--selected" : ""}`}
+                        className={`planner-event planner-event--${categoryClass(event.category)}${event.studyFor ? " planner-event--study" : ""}${selectedEventId === event.id ? " planner-event--selected" : ""}`}
                         key={event.id}
                         onClick={() => selectEvent(event)}
                         style={{ "--planner-event-row": event.startHour / 6 } as CSSProperties}

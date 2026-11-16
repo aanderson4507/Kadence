@@ -17,7 +17,7 @@ npm run dev
 ## Database and API
 
 Kadence stores data in PostgreSQL 17 through Prisma, served by a small Express API in `server/`.
-Full setup (local and shared cloud database) is in [docs/database.md](docs/database.md).
+Full setup (local and shared cloud database) is in [docs/database.md](docs/database.md); teammate onboarding and secret handling are in [docs/team-setup.md](docs/team-setup.md).
 
 ```sh
 cp .env.example .env   # then set your local PostgreSQL password
@@ -28,6 +28,12 @@ npm run dev:api        # API on http://localhost:3001 (Vite proxies /api)
 ```
 
 The React screens still use in-memory sample data; connecting them to the API is the next step.
+
+## Tests
+
+```sh
+npm test               # runs server/**/*.test.ts and src/**/*.test.ts (no database needed)
+```
 
 ## Production build
 
@@ -66,11 +72,27 @@ type, goal size, and optional linked task; edit task details, status, schedule,
 description, and notes; or delete tasks with confirmation. Planner changes are
 kept in page state and reset on refresh.
 
-Open Settings from the workspace gear or the Goals sidebar to update profile,
-planner, reminder, goal, task carryover, weekly review, and privacy preferences.
-Settings changes stay in page state until saved, except privacy preferences,
-which apply immediately. Theme changes apply immediately as well. The header
-sun/moon button switches the app between light and dark themes; the selected
-theme is saved in this browser and applies across the login, workspace, and
-Settings pages. Data export downloads the current preferences, tasks, goals,
+Mark a task as an exam with the **Exam** button when adding it in the To-do
+list, from a task's ⋯ menu, or with **This is an exam** in the Priority setter.
+Kadence then schedules study sessions in the days before the exam inside your
+study hours, around events already in the Visual Planner (use **Next study
+session** to jump to them). The Breakdown page lists each exam's sessions and
+warns when some don't fit. Change the number of study days, session length,
+sessions per day and study hours in Settings → Exam study sessions. Tasks are
+listed in priority order: priority level, then a boost for exams, then the
+nearest deadlines (see `src/taskPriority.ts`; scheduling rules are in
+`src/studySessions.ts`).
+
+Open Settings from the workspace gear or the Goals sidebar. It opens to an
+Overview with your account details and the preferences changed most often
+(theme, accent color, planner view, landing page, default goal priority, and
+key reminders), plus links to every other section: profile, planner, reminders,
+goals, task carryover, weekly review, and privacy. Settings are loaded from and
+saved to the database through `GET`/`PATCH /api/users/:userId/settings`, so the
+API (`npm run dev:api`) must be running. Edits on any section are saved together
+with one **Save changes** click; invalid input or a failed save shows the reason
+and keeps your edits so you can try again. Theme changes apply and save right
+away, including from the header sun/moon button. Until authentication exists,
+Settings uses the seeded demo account. Profile picture uploads are a preview
+only and are not saved yet. Data export downloads the current preferences, tasks, goals,
 and planner events as JSON. Account deletion is for review only in this demo.
