@@ -8,8 +8,15 @@ import {
   type SetStateAction,
 } from "react";
 import "./TodoList.css";
+import {
+  addDaysToKey,
+  describeUrgency,
+  sortTasksByPriority,
+  todayKey,
+  type Priority,
+} from "./taskPriority";
 
-export type Priority = "Very High" | "High" | "Medium" | "Low" | "Very Low" | "None";
+export type { Priority };
 type TaskStatus = "All tasks" | "Active" | "Completed";
 
 export type Task = {
@@ -20,10 +27,20 @@ export type Task = {
   completed: boolean;
   dueDate?: string;
   completedDate?: string;
+  /** Exams get study sessions scheduled in the days before their due date. */
+  isExam?: boolean;
 };
 
 export const initialTasks: Task[] = [
-  
+  {
+    id: "calc-exam-2",
+    title: "Calculus Exam 2",
+    category: "Study",
+    priority: "Very High",
+    completed: false,
+    dueDate: addDaysToKey(todayKey(), 6),
+    isExam: true,
+  },
   {
     id: "calc-review",
     title: "Complete Test Review for Calc.",
@@ -96,13 +113,19 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
   const [showCompleted, setShowCompleted] = useState(true);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [newTaskIsExam, setNewTaskIsExam] = useState(false);
+  const [quickAddError, setQuickAddError] = useState("");
   const [openTaskMenu, setOpenTaskMenu] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const quickAddInput = useRef<HTMLInputElement>(null);
   const priorityMenuRef = useRef<HTMLDivElement>(null);
   const priorityTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const priorityTasks = tasks.filter((task) => task.priority === priorityFilter);
+  const today = todayKey();
+  const priorityTasks = sortTasksByPriority(
+    tasks.filter((task) => task.priority === priorityFilter),
+    today,
+  );
   const activeCount = priorityTasks.filter((task) => !task.completed).length;
   const completedCount = priorityTasks.length - activeCount;
   const visibleTasks = priorityTasks.filter((task) => {
@@ -133,6 +156,10 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
     event.preventDefault();
     const title = newTaskTitle.trim();
     if (!title) return;
+    if (newTaskIsExam && !newTaskDueDate) {
+      setQuickAddError("Add the exam date so Kadence can schedule study sessions before it.");
+      return;
+    }
 
     const task: Task = {
       id: crypto.randomUUID(),
@@ -141,13 +168,18 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
       priority: priorityFilter,
       completed: false,
       ...(newTaskDueDate && { dueDate: newTaskDueDate }),
+      ...(newTaskIsExam && { isExam: true, category: "Exam" }),
     };
     setTasks((currentTasks) => [...currentTasks, task]);
     setTaskStatus("All tasks");
     setShowCompleted(true);
     setNewTaskTitle("");
     setNewTaskDueDate("");
-    setAnnouncement(`Added task: ${title}`);
+    setNewTaskIsExam(false);
+    setQuickAddError("");
+    setAnnouncement(
+      newTaskIsExam ? `Added exam: ${title}. Study sessions were added to your planner.` : `Added task: ${title}`,
+    );
   }
 
   function toggleTask(taskId: string) {
@@ -180,6 +212,22 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
     setTasks((currentTasks) => currentTasks.filter((item) => item.id !== taskId));
     setOpenTaskMenu(null);
     setAnnouncement(`Deleted task: ${task.title}`);
+  }
+
+  function toggleExam(taskId: string) {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    setTasks((currentTasks) =>
+      currentTasks.map((item) => (item.id === taskId ? { ...item, isExam: !item.isExam } : item)),
+    );
+    setOpenTaskMenu(null);
+    setAnnouncement(
+      task.isExam
+        ? `${task.title} is no longer marked as an exam.`
+        : task.dueDate
+          ? `${task.title} marked as an exam. Study sessions were added to your planner.`
+          : `${task.title} marked as an exam. Add a due date to schedule study sessions.`,
+    );
   }
 
   function selectPriority(priority: Priority) {
@@ -396,10 +444,19 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
 
               <div className="todo-task-details">
                 <span className="todo-task-title">{task.title}</span>
-                <span className="todo-task-category">{task.category}</span>
+                <span className="todo-task-category">
+                  {task.isExam && <span className="todo-exam-badge">Exam</span>}
+                  {task.category}
+                </span>
                 {task.dueDate && (
                   <span className="todo-task-due-date">
                   Due {new Date(`${task.dueDate}T00:00:00`).toLocaleDateString()}
+                  {!task.completed && ` · ${describeUrgency({ ...task, isExam: false }, today)}`}
+                  </span>
+                )}
+                {task.isExam && !task.dueDate && !task.completed && (
+                  <span className="todo-task-due-date todo-task-due-date--warning">
+                    Add a due date to schedule study sessions
                   </span>
                 )}
               
@@ -435,6 +492,13 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                 </button>
                 {openTaskMenu === task.id && (
                   <div className="todo-task-menu">
+                    <button
+                      className="todo-task-menu__neutral"
+                      onClick={() => toggleExam(task.id)}
+                      type="button"
+                    >
+                      {task.isExam ? "Unmark as exam" : "Mark as exam"}
+                    </button>
                     <button onClick={() => deleteTask(task.id)} type="button">
                       Delete task
                     </button>
@@ -470,15 +534,35 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
             value={newTaskTitle}
           />
           <input
-            aria-label="Task due date"
-            onChange={(event) => setNewTaskDueDate(event.target.value)}
+            aria-label={newTaskIsExam ? "Exam date" : "Task due date"}
+            onChange={(event) => {
+              setNewTaskDueDate(event.target.value);
+              setQuickAddError("");
+            }}
             type="date"
             value={newTaskDueDate}
           />
+          <button
+            aria-pressed={newTaskIsExam}
+            className={`todo-exam-toggle${newTaskIsExam ? " todo-exam-toggle--on" : ""}`}
+            onClick={() => {
+              setNewTaskIsExam((isExam) => !isExam);
+              setQuickAddError("");
+            }}
+            title="Mark as an exam to schedule study sessions before it"
+            type="button"
+          >
+            Exam
+          </button>
           <button aria-label="Add task" type="submit">
             ↵
           </button>
         </form>
+        {quickAddError && (
+          <p className="todo-quick-add-error" role="alert">
+            {quickAddError}
+          </p>
+        )}
 
         <footer className="todo-card-footer">
           <p>

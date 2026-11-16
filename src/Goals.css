@@ -452,25 +452,26 @@
   margin-top: 3px;
 }
 
-.goal-card__progress > img {
-  display: block;
-  max-width: calc(100% - 34px);
-  height: auto;
-}
-
-.goal-card__progress > img:first-child {
-  position: absolute;
-  left: 0;
-  z-index: 0;
-}
-
-.goal-card__progress > img.goal-card__progress-fill {
+.goal-card__progress-track {
   position: relative;
-  z-index: 1;
-  margin-right: auto;
+  display: block;
+  min-width: 0;
+  height: 6px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e6ece5;
 }
 
-.goal-card__progress > span {
+.goal-card__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #7fa187;
+  transition: width 160ms ease;
+}
+
+.goal-card__progress-label {
   margin-left: auto;
   color: #8c978e;
   font-size: 10px;

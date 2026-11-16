@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler, type Request } from "express";
 import type { Db } from "./db.ts";
 import { createGoal, listGoals, updateGoalPriority } from "./services/goalService.ts";
+import { getSettings, updateSettings } from "./services/settingsService.ts";
 import { createTask, listTasks, updateTask } from "./services/taskService.ts";
 import { requireUuid } from "./validation.ts";
 
@@ -45,6 +46,14 @@ export function createApp(db: Db) {
       res.json(user);
     });
   }
+
+  app.get("/api/users/:userId/settings", async (req, res) => {
+    res.json(await getSettings(db, requireUuid(req.params.userId, "userId")));
+  });
+
+  app.patch("/api/users/:userId/settings", async (req, res) => {
+    res.json(await updateSettings(db, requireUuid(req.params.userId, "userId"), body(req)));
+  });
 
   app.get("/api/users/:userId/goals", async (req, res) => {
     res.json(await listGoals(db, requireUuid(req.params.userId, "userId")));
