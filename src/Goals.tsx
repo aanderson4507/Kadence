@@ -571,7 +571,6 @@ function GoalCard({
   onPriorityChange: (priority: Priority) => void;
 }) {
   const progress = goal.completed ? 100 : goal.progress;
-  const progressAsset = `/assets/goal-progress-${progress}.svg`;
 
   return (
     <article className="goal-card">
@@ -622,15 +621,13 @@ function GoalCard({
           aria-valuemin={0}
           aria-valuenow={progress}
         >
-          <img alt="" src="/assets/goal-progress-track.svg" />
-          {progress > 0 && (
-            <img
-              alt=""
+          <span aria-hidden="true" className="goal-card__progress-track">
+            <span
               className="goal-card__progress-fill"
-              src={progressAsset}
+              style={{ width: `${progress}%` }}
             />
-          )}
-          <span>{progress}%</span>
+          </span>
+          <span className="goal-card__progress-label">{progress}%</span>
         </div>
         {goal.status && !goal.completed && (
           <span className="goal-card__status">{goal.status}</span>

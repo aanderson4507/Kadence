@@ -800,6 +800,7 @@
 }
 
 .planner-create-field input,
+.planner-create-field textarea,
 .planner-create-field select {
   width: 100%;
   min-width: 0;
@@ -812,6 +813,31 @@
   font: inherit;
   font-size: 13px;
   font-weight: 400;
+}
+
+.planner-create-field textarea {
+  height: auto;
+  min-height: 82px;
+  padding: 12px;
+  resize: vertical;
+  font: inherit;
+}
+
+.planner-save-message:empty {
+  display: none;
+}
+
+.planner-save-message {
+  margin: 0;
+  color: inherit;
+}
+
+.planner-form-error {
+  margin: 0;
+  padding: 12px 20px;
+  color: #a13030;
+  background: #fff0f0;
+  border-radius: 8px;
 }
 
 .planner-segmented-control {

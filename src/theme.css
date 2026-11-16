@@ -108,7 +108,8 @@ html[data-theme="dark"] .utility-popover span {
 }
 
 html[data-theme="dark"] .search-field input,
-html[data-theme="dark"] .restore-views {
+html[data-theme="dark"] .restore-views,
+html[data-theme="dark"] .workspace-layout-toggle {
   border-color: var(--theme-border);
   color: var(--theme-text);
   background: var(--theme-input);
@@ -116,6 +117,10 @@ html[data-theme="dark"] .restore-views {
 
 html[data-theme="dark"] .tab-empty-message {
   color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .workspace-layout-toggle:hover {
+  background: var(--theme-hover);
 }
 
 html[data-theme="dark"] .todo-page-heading h1,

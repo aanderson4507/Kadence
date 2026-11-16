@@ -30,6 +30,18 @@ type UtilityMenu = "notifications" | "profile" | null;
 
 type ThemePreference = "Light mode" | "Dark mode" | "System default";
 
+type PanelResizeStart = {
+  pointerId: number;
+  leftLabel: string;
+  rightLabel: string;
+  startX: number;
+  leftSize: number;
+  rightSize: number;
+  containerWidth: number;
+};
+
+const minimumPanelWidth = 320;
+
 function Dashboard({
   themePreference,
   onThemeChange,
@@ -43,10 +55,25 @@ function Dashboard({
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const [views, setViews] = useState(initialViews);
   const [activeView, setActiveView] = useState<string | null>("To do");
+  const [splitViewOpen, setSplitViewOpen] = useState(false);
+  const [panelSizes, setPanelSizes] = useState<Record<string, number>>({});
+  const panelResizeStart = useRef<PanelResizeStart | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenu, setOpenMenu] = useState<UtilityMenu>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [quickSetupRequest, setQuickSetupRequest] = useState(0);
+
+  function openQuickSetup() {
+    setViews((current) => current.some((view) => view.label === "Visual Planner")
+      ? current : [...current, initialViews.find((view) => view.label === "Visual Planner")!]);
+    setSettingsOpen(false);
+    setOpenMenu(null);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setActiveView("Visual Planner");
+    setQuickSetupRequest((current) => current + 1);
+  }
   const [showWeeklyReviewReminder, setShowWeeklyReviewReminder] =
   useState(false);
 
@@ -111,12 +138,133 @@ useEffect(() => {
   const visibleViews = views.filter((view) =>
     view.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   );
+  const isPanelLayout = splitViewOpen && views.length > 1;
+  const selectedView = views.find((view) => view.label === activeView) ?? views[0];
+  const panelViews = isPanelLayout ? views : selectedView ? [selectedView] : [];
+  const panelGridColumns = panelViews
+    .flatMap((view, index) => [
+      `minmax(${isPanelLayout ? `${minimumPanelWidth}px` : "0"}, ${panelSizes[view.label] ?? 1}fr)`,
+      ...(index < panelViews.length - 1 ? ["12px"] : []),
+    ])
+    .join(" ");
+  const panelGridWidth = isPanelLayout
+    ? `max(100%, calc(${minimumPanelWidth * panelViews.length + 12 * (panelViews.length - 1)}px + 15vw))`
+    : "100%";
+
+  function getMinimumPanelSize(totalSize: number, containerWidth: number) {
+    return Math.min(
+      totalSize / 2,
+      (minimumPanelWidth / Math.max(containerWidth, minimumPanelWidth * 2)) * totalSize,
+    );
+  }
+
+  function resizePanels(
+    event: ReactPointerEvent<HTMLButtonElement>,
+    leftView: View,
+    rightView: View,
+  ) {
+    if (event.type === "pointerdown") {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      panelResizeStart.current = {
+        pointerId: event.pointerId,
+        leftLabel: leftView.label,
+        rightLabel: rightView.label,
+        startX: event.clientX,
+        leftSize: panelSizes[leftView.label] ?? 1,
+        rightSize: panelSizes[rightView.label] ?? 1,
+        containerWidth: event.currentTarget.parentElement?.clientWidth ?? window.innerWidth,
+      };
+      return;
+    }
+
+    const resizeStart = panelResizeStart.current;
+    if (!resizeStart || resizeStart.pointerId !== event.pointerId) return;
+
+    if (event.type === "pointerup" || event.type === "pointercancel") {
+      panelResizeStart.current = null;
+      return;
+    }
+
+    const totalSize = resizeStart.leftSize + resizeStart.rightSize;
+    const minimumSize = getMinimumPanelSize(totalSize, resizeStart.containerWidth);
+    const leftSize = Math.min(
+      totalSize - minimumSize,
+      Math.max(
+        minimumSize,
+        resizeStart.leftSize +
+          ((event.clientX - resizeStart.startX) / resizeStart.containerWidth) * totalSize,
+      ),
+    );
+
+    setPanelSizes((currentSizes) => ({
+      ...currentSizes,
+      [resizeStart.leftLabel]: leftSize,
+      [resizeStart.rightLabel]: totalSize - leftSize,
+    }));
+  }
+
+  function handlePanelResizeKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    leftView: View,
+    rightView: View,
+  ) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+
+    const leftSize = panelSizes[leftView.label] ?? 1;
+    const rightSize = panelSizes[rightView.label] ?? 1;
+    const totalSize = leftSize + rightSize;
+    const step = totalSize * 0.05;
+    const containerWidth =
+      event.currentTarget.parentElement?.clientWidth ?? window.innerWidth;
+    const minimumSize = getMinimumPanelSize(totalSize, containerWidth);
+    const nextLeftSize = Math.min(
+      totalSize - minimumSize,
+      Math.max(minimumSize, leftSize + (event.key === "ArrowRight" ? step : -step)),
+    );
+
+    setPanelSizes((currentSizes) => ({
+      ...currentSizes,
+      [leftView.label]: nextLeftSize,
+      [rightView.label]: totalSize - nextLeftSize,
+    }));
+  }
+
+  function renderView(view: View) {
+    switch (view.label) {
+      case "To do":
+        return <TodoList tasks={tasks} setTasks={setTasks} />;
+      case "Breakdown":
+        return <Breakdown tasks={tasks} />;
+      case "Goals":
+        return (
+          <Goals
+            activeView={activeView}
+            onDataChange={setGoalsForExport}
+            onOpenBreakdown={() => setActiveView("Breakdown")}
+            onOpenSettings={() => {
+              setSettingsOpen(true);
+              setOpenMenu(null);
+            }}
+            onSelectView={setActiveView}
+          />
+        );
+      case "Priority":
+        return <PrioritySetter tasks={tasks} setTasks={setTasks} />;
+      case "Visual Planner":
+        return <VisualPlanner onDataChange={setPlannerEventsForExport} quickSetupRequest={quickSetupRequest} />;
+      default:
+        return null;
+    }
+  }
 
   function closeView(label: string) {
     const closingIndex = views.findIndex((view) => view.label === label);
     const nextViews = views.filter((view) => view.label !== label);
 
     setViews(nextViews);
+    if (nextViews.length < 2) setSplitViewOpen(false);
     if (activeView === label) {
       setActiveView(nextViews[Math.min(closingIndex, nextViews.length - 1)]?.label ?? null);
     }
@@ -174,6 +322,8 @@ useEffect(() => {
   function restoreViews() {
     setViews(initialViews);
     setActiveView("To do");
+    setSplitViewOpen(false);
+    setPanelSizes({});
     setSearchQuery("");
   }
 
@@ -332,6 +482,10 @@ useEffect(() => {
         )}
       </header>
 
+      <button className="dashboard-quick-setup" type="button" onClick={openQuickSetup}>
+        <span aria-hidden="true">＋ </span>Quick Setup
+      </button>
+
       <nav aria-label="Workspace views" className="workspace-tabs" hidden={settingsOpen}>
         {visibleViews.map((view) => (
           <div
@@ -363,6 +517,16 @@ useEffect(() => {
             </button>
           </div>
         ))}
+        {views.length > 1 && (
+          <button
+            aria-pressed={isPanelLayout}
+            className="workspace-layout-toggle"
+            onClick={() => setSplitViewOpen((isOpen) => !isOpen)}
+            type="button"
+          >
+            {isPanelLayout ? "Tabbed view" : "Split view"}
+          </button>
+        )}
         {visibleViews.length === 0 && searchQuery && (
           <p className="tab-empty-message" role="status">
             No views match “{searchQuery}”.
@@ -375,38 +539,56 @@ useEffect(() => {
         )}
       </nav>
 
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "To do"}>
-        <TodoList tasks={tasks} setTasks={setTasks} />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Breakdown"}>
-        <Breakdown
-          tasks={tasks}
-          goals={goalsForExport}
-          studyPlan={studyPlan}
-          onOpenPlanner={() => setActiveView("Visual Planner")}
-          onOpenStudySettings={() => {
-            setSettingsOpen(true);
-            setOpenMenu(null);
-          }}
-        />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Goals"}>
-        <Goals
-          activeView={activeView}
-          onDataChange={setGoalsForExport}
-          onOpenBreakdown={() => setActiveView("Breakdown")}
-          onOpenSettings={() => {
-            setSettingsOpen(true);
-            setOpenMenu(null);
-          }}
-          onSelectView={setActiveView}
-        />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Priority"}>
-        <PrioritySetter tasks={tasks} setTasks={setTasks} />
-      </div>
-      <div className="dashboard-content" hidden={settingsOpen || activeView !== "Visual Planner"}>
-        <VisualPlanner onDataChange={setPlannerEvents} studySessions={studyPlan.sessions} />
+      <div
+        className={`workspace-panels${isPanelLayout ? " workspace-panels--resizable" : ""}`}
+        hidden={settingsOpen || panelViews.length === 0}
+      >
+        <div
+          className="workspace-panel-grid"
+          style={{ gridTemplateColumns: panelGridColumns, width: panelGridWidth }}
+        >
+          {initialViews.map((view) => {
+            const isOpen = views.some((openView) => openView.label === view.label);
+            const isDisplayed =
+              isOpen && (isPanelLayout || panelViews[0]?.label === view.label);
+            const panelIndex = panelViews.findIndex((panelView) => panelView.label === view.label);
+            const nextView =
+              isPanelLayout && isOpen ? panelViews[panelIndex + 1] : undefined;
+            const leftSize = panelSizes[view.label] ?? 1;
+            const rightSize = nextView ? panelSizes[nextView.label] ?? 1 : 0;
+
+            return (
+              <Fragment key={view.label}>
+                <div
+                  aria-current={activeView === view.label ? "page" : undefined}
+                  aria-label={`${view.label} panel`}
+                  className={`dashboard-content${isPanelLayout ? " dashboard-content--split" : ""}`}
+                  hidden={!isDisplayed}
+                >
+                  {renderView(view)}
+                </div>
+                {nextView && (
+                  <button
+                    aria-label={`Resize ${view.label} and ${nextView.label} panels`}
+                    aria-orientation="vertical"
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={Math.round((leftSize / (leftSize + rightSize)) * 100)}
+                    className="workspace-panel-resizer"
+                    onKeyDown={(event) => handlePanelResizeKeyDown(event, view, nextView)}
+                    onPointerCancel={(event) => resizePanels(event, view, nextView)}
+                    onPointerDown={(event) => resizePanels(event, view, nextView)}
+                    onPointerMove={(event) => resizePanels(event, view, nextView)}
+                    onPointerUp={(event) => resizePanels(event, view, nextView)}
+                    role="separator"
+                    type="button"
+                  />
+                )}
+              </Fragment>
+            );
+          })}
+        </div>
+
       </div>
       <div className="dashboard-content" hidden={!settingsOpen}>
         <Settings
