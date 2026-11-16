@@ -107,15 +107,11 @@ $ npm run build            # tsc + vite production build
 
 ### Lint
 
-The project does not have a linter configured yet. Installing one needs a new dev dependency,
-which was not approved during this session. To add it:
-
-```sh
-npm install --save-dev --save-exact oxlint
-npm pkg set scripts.lint="oxlint src server --deny-warnings"
-npm run lint
+```text
+$ npm run lint
+> oxlint src server --deny-warnings
+(exit code 0: no errors or warnings)
 ```
 
-oxlint is suggested because it doesn't depend on the TypeScript compiler API, so it works with the
-project's TypeScript 7 regardless of typescript-eslint's support for that version. Until it's added, `npm run typecheck` (strict mode with `noUnusedLocals` and
-`noUnusedParameters`) is the code-quality gate.
+oxlint was chosen because it doesn't depend on the TypeScript compiler API, so it works with the
+project's TypeScript 7. Warnings fail the check (`--deny-warnings`).

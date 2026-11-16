@@ -46,15 +46,13 @@ criteria: [docs/user-stories.md](user-stories.md).
 
 - `npm test`: **116 tests, 116 passing** (unit tests plus 11 database integration tests, including
   a restart test).
-- `npm run typecheck` and `npm run build`: pass.
+- `npm run lint` (oxlint), `npm run typecheck` and `npm run build`: pass.
 - Evidence: `docs/sprint2-evidence.md`.
 
 ## Known limitations
 
 - Sign-in checks the password against the database, but the API has no sessions yet; routes are
   scoped by user id. Development data only.
-- No linter is configured yet (see `docs/sprint2-evidence.md`); TypeScript strict mode is the
-  current quality gate.
 - Notifications are in-app only. Email/push channels are stored but not sent.
 - Profile picture uploads are a preview only; account deletion is not connected.
 - Assumptions still awaiting team sign-off are listed in `docs/ai-design-review.md` §3.
