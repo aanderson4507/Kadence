@@ -13,14 +13,15 @@
     "preview": "vite preview",
     "typecheck:server": "tsc -p server/tsconfig.json",
     "test": "node --import tsx --test \"server/**/*.test.ts\" \"src/**/*.test.ts\"",
-    "postinstall": "prisma generate --config prisma.config.ts",
+    "postinstall": "prisma generate --config prisma.config.ts && node scripts/setup-hooks.mjs",
     "db:generate": "prisma generate --config prisma.config.ts",
     "db:migrate": "prisma migrate dev --config prisma.config.ts",
     "db:deploy": "prisma migrate deploy --config prisma.config.ts",
     "db:seed": "prisma db seed --config prisma.config.ts",
     "db:reset": "prisma migrate reset --config prisma.config.ts",
     "db:check": "tsx server/checkConnection.ts",
-    "db:studio": "prisma studio --config prisma.config.ts"
+    "db:studio": "prisma studio --config prisma.config.ts",
+    "check:secrets": "node scripts/check-secrets.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

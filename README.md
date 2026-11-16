@@ -17,7 +17,7 @@ npm run dev
 ## Database and API
 
 Kadence stores data in PostgreSQL 17 through Prisma, served by a small Express API in `server/`.
-Full setup (local and shared cloud database) is in [docs/database.md](docs/database.md).
+Full setup (local and shared cloud database) is in [docs/database.md](docs/database.md); teammate onboarding and secret handling are in [docs/team-setup.md](docs/team-setup.md).
 
 ```sh
 cp .env.example .env   # then set your local PostgreSQL password
