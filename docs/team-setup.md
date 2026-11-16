@@ -72,3 +72,59 @@ Deleting the file in a new commit does **not** remove it from history.
 2. Tell the team lead.
 3. Only then, if needed, remove it from history (`git filter-repo`) and force-push with the team's
    agreement. Rotation is the part that actually protects you.
+
+## Keeping the schema and environment consistent
+
+### One source of truth for the schema
+
+- `prisma/schema.prisma` plus the committed folders in `prisma/migrations/` define the database.
+  Never edit a database by hand (Prisma Studio is for browsing data, not changing structure).
+- **Changing the schema:**
+  1. Edit `schema.prisma`.
+  2. `npm run db:migrate -- --name <short-description>` creates and applies a migration locally.
+  3. Commit the schema change and the new migration folder together in the same PR.
+  4. Reviewers read the generated `migration.sql` (watch for dropped columns or data loss).
+- **Never edit or delete a migration that is already merged.** Fix mistakes with a new migration.
+- **After pulling changes:** run `npm install` (regenerates the Prisma client) and
+  `npm run db:migrate` (applies migrations others added). If it reports drift on your local
+  database, `npm run db:reset` rebuilds it from migrations and reseeds it (local only, destroys local data).
+- **Check your state:** `npm run db:status` lists applied and pending migrations.
+- **Merge conflicts in migrations:** if two branches add migrations, keep both folders, then regenerate
+  yours on top of the merged schema (delete only your own unmerged migration folder, then re-run
+  `db:migrate`).
+- **Shared database:** only merged migrations are applied, with `npm run db:deploy`, by one person at a
+  time, announced to the team first.
+- CHECK constraints are written by hand in migration SQL. Document them in
+  [database.md](database.md) when you add one.
+
+### One development environment
+
+| Item | How it is pinned |
+|---|---|
+| Node.js | `.nvmrc` (22) and `engines` in `package.json` (`^20.19.0 || >=22.12.0`). Run `nvm use` if you use nvm. |
+| Packages | `package-lock.json` is committed. Use `npm ci` for an exact install; use `npm install` only to add or update a dependency, and commit the lockfile. |
+| Database engine | PostgreSQL 17 everywhere (local, Docker and Neon). |
+| Prisma and generated client | Version pinned by the lockfile; the client is regenerated on `npm install`. |
+| Ports and URLs | Defaults in `.env.example` (`API_PORT=3001`, Vite on 5173 proxying `/api`). |
+| Line endings | `.gitattributes` keeps hook scripts LF on every OS. |
+| Secrets | Only in each person's `.env`; see above. |
+
+### Before opening a PR
+
+```sh
+npm run db:status      # no pending or failed migrations
+npm run typecheck:server
+npm test
+npm run build
+npm run check:secrets
+```
+
+## Documentation rules (no secrets)
+
+Documents, READMEs, PR descriptions, issues and AI-generated text must contain placeholders only:
+`YOUR_LOCAL_PASSWORD`, `YOUR_NEON_HOST` and so on. Never paste a real `DATABASE_URL`, password, token
+or the contents of `.env`, including inside screenshots, terminal output or error logs. Redact them
+first. The only credential written in the docs is the demo login (`demo` / `kadence-demo`), which
+exists only in the development seed data and must never be used outside local development. If you
+generate documentation with an AI tool, review it for pasted credentials before committing; the
+pre-commit check also scans staged files.

@@ -17,6 +17,7 @@
     "db:generate": "prisma generate --config prisma.config.ts",
     "db:migrate": "prisma migrate dev --config prisma.config.ts",
     "db:deploy": "prisma migrate deploy --config prisma.config.ts",
+    "db:status": "prisma migrate status --config prisma.config.ts",
     "db:seed": "prisma db seed --config prisma.config.ts",
     "db:reset": "prisma migrate reset --config prisma.config.ts",
     "db:check": "tsx server/checkConnection.ts",
