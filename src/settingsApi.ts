@@ -2,6 +2,8 @@
 // The page works with readable labels; the API uses the database enum values. The two
 // mapping tables below are the only place that translation happens.
 
+import { ApiError, request } from "./http";
+import { currentUser } from "./session";
 import {
   DEFAULT_STUDY_PREFERENCES,
   validateStudyPreferences,
@@ -424,49 +426,23 @@ export function sameSettings(a: SettingsValues, b: SettingsValues) {
   return JSON.stringify(toSettingsPayload(a)) === JSON.stringify(toSettingsPayload(b));
 }
 
-export class SettingsRequestError extends Error {}
-
-const REQUEST_TIMEOUT_MS = 10_000;
-
-async function request(path: string, failureMessage: string, init?: RequestInit) {
-  let response: Response;
-  try {
-    response = await fetch(path, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  } catch {
-    throw new SettingsRequestError(
-      `${failureMessage} Kadence couldn't reach the server. Check your connection and try again.`,
-    );
-  }
-  const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) {
-    const serverMessage =
-      typeof body === "object" && body !== null && typeof (body as { error?: unknown }).error === "string"
-        ? (body as { error: string }).error
-        : null;
-    // 4xx messages explain what to fix; 5xx messages are generic and not useful to show.
-    throw new SettingsRequestError(
-      response.status < 500 && serverMessage
-        ? `${failureMessage} ${serverMessage}`
-        : `${failureMessage} Please try again in a moment.`,
-    );
-  }
-  return body;
-}
+/** Settings failures are ApiErrors; the old name is kept for existing callers and tests. */
+export { ApiError as SettingsRequestError };
 
 /**
- * Loads the signed-in user's settings. Authentication is not implemented yet, so this uses
- * the development demo account (see GET /api/dev/user in server/app.ts).
+ * Loads a user's settings: the given account, or else the signed-in one (in development, the
+ * seeded demo account when nobody has signed in).
  */
-export async function loadSettings(): Promise<{
+export async function loadSettings(userId?: string): Promise<{
   userId: string;
   account: AccountInfo;
   values: SettingsValues;
 }> {
   const failure = "Couldn't load your saved settings.";
-  const user = (await request("/api/dev/user", failure)) as { id: string };
-  const response = (await request(`/api/users/${user.id}/settings`, failure)) as ApiSettings;
+  const id = userId ?? (await currentUser(failure)).id;
+  const response = await request<ApiSettings>(`/api/users/${id}/settings`, failure);
   return {
-    userId: user.id,
+    userId: id,
     account: { username: text(response.profile.username) },
     values: fromSettingsResponse(response),
   };
@@ -477,11 +453,11 @@ export async function saveSettings(
   userId: string,
   values: SettingsValues,
 ): Promise<SettingsValues> {
-  const response = (await request(`/api/users/${userId}/settings`, "Your changes weren't saved.", {
+  const response = await request<ApiSettings>(`/api/users/${userId}/settings`, "Your changes weren't saved.", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(toSettingsPayload(values)),
-  })) as ApiSettings;
+  });
   return fromSettingsResponse(response, values.profile.avatar);
 }
 

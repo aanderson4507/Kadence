@@ -21,6 +21,7 @@ import {
   type SettingsValues,
   type ThemePreference,
 } from "./settingsApi";
+import { AvailabilitySettings, ReminderFrequencySettings } from "./SchedulingSettings";
 import { validateStudyPreferences, type StudyPreferences } from "./studySessions";
 
 type SettingsSection =
@@ -135,17 +136,19 @@ type SettingsProps = {
   isDarkMode: boolean;
   onThemeChange: (theme: ThemePreference) => void;
   onExport: (preferences: object) => void;
-  /** Called with the saved (not draft) study preferences whenever they load or change. */
-  onStudyPreferencesChange: (preferences: StudyPreferences) => void;
+  /** Called after anything is saved, so study sessions, reminders and missed-task handling update. */
+  onSaved: () => void;
   themePreference: ThemePreference;
+  userId: string;
 };
 
 function Settings({
   isDarkMode,
   onExport,
-  onStudyPreferencesChange,
+  onSaved,
   onThemeChange,
   themePreference,
+  userId: accountId,
 }: SettingsProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("overview");
   const [savedSettings, setSavedSettings] = useState(() =>
@@ -168,7 +171,7 @@ function Settings({
   async function fetchSettings() {
     setLoadState({ kind: "loading" });
     try {
-      const loaded = await loadSettings();
+      const loaded = await loadSettings(accountId);
       serverTheme.current = loaded.values.planner.theme;
       setUserId(loaded.userId);
       setAccount(loaded.account);
@@ -185,11 +188,6 @@ function Settings({
     // Load once when the workspace opens; Retry calls fetchSettings again.
     void fetchSettings();
   }, []);
-
-  const savedStudy = savedSettings.study;
-  useEffect(() => {
-    onStudyPreferencesChange(savedStudy);
-  }, [savedStudy, onStudyPreferencesChange]);
 
   // The theme applies and saves right away, whether it is changed here or from the header.
   useEffect(() => {
@@ -233,6 +231,7 @@ function Settings({
       // Keep anything typed while the save was in flight.
       setDraft((current) => (current === submitted ? stored : current));
       setStatus({ kind: "success", text: "Changes saved." });
+      onSaved();
     } catch (error) {
       // The draft is kept so nothing is lost; Save stays available to try again.
       setStatus({ kind: "error", text: errorMessage(error) });
@@ -433,6 +432,16 @@ function Settings({
           )}
           {renderSaveRow()}
         </div>
+        {activeSection === "notifications" && userId && (
+          <div className="settings-card">
+            <ReminderFrequencySettings onSaved={onSaved} userId={userId} />
+          </div>
+        )}
+        {activeSection === "unfinished" && userId && (
+          <div className="settings-card">
+            <AvailabilitySettings onSaved={onSaved} userId={userId} />
+          </div>
+        )}
       </section>
 
       {deleteReviewOpen && (

@@ -140,9 +140,11 @@ describe("getSettings", () => {
     assert.equal(result.profile.graduationDate, "2028-05");
     assert.equal(result.preferences.theme, "LIGHT");
     assert.equal(result.preferences.reviewMinute, 990);
-    // Columns the Settings page doesn't edit are not exposed.
+    // Columns the app doesn't edit are not exposed.
     assert.equal("deleteCompletedAfterDays" in result.preferences, false);
-    assert.equal("dashboardMode" in result.preferences, false);
+    // The main-screen mode and tab layout are saved from the workspace (issues #6 and #8).
+    assert.equal(result.preferences.dashboardMode, "SIMPLE");
+    assert.equal(result.preferences.tabLayout, null);
   });
 
   it("creates the settings row with defaults the first time", async () => {
@@ -244,6 +246,30 @@ describe("updateSettings", () => {
       assert.equal(state.writes, 0);
     });
   }
+
+  it("saves the main-screen mode and tab layout (issues #6, #8)", async () => {
+    const { db } = createFakeDb();
+    const layout = { views: [{ view: "To do", size: 1.4 }, { view: "Goals", size: 0.6 }], split: true, active: "To do" };
+    const result = await updateSettings(db, USER_ID, {
+      preferences: { dashboardMode: "ADVANCED", tabLayout: layout },
+    });
+    assert.equal(result.preferences.dashboardMode, "ADVANCED");
+    assert.deepEqual(result.preferences.tabLayout, layout);
+  });
+
+  it("rejects a malformed tab layout", async () => {
+    const { db } = createFakeDb();
+    await assert.rejects(
+      updateSettings(db, USER_ID, {
+        preferences: { tabLayout: { views: [{ view: "To do", size: -1 }], split: false, active: null } },
+      }),
+      { message: /size must be a number greater than 0/ },
+    );
+    await assert.rejects(
+      updateSettings(db, USER_ID, { preferences: { dashboardMode: "CLUTTERED" } }),
+      ValidationError,
+    );
+  });
 
   it("rejects an update where one field is invalid, keeping the valid ones unsaved too", async () => {
     const { db } = createFakeDb();

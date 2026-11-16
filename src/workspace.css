@@ -1,0 +1,535 @@
+/* Styles for the Sprint 2 database-backed features: loading/error screens, the simple/advanced
+   switch, notifications, missed-task banner, repeat and reminder fields, milestone scheduling,
+   the planner priority filter and the scheduling panels in Settings. */
+
+/* --- Workspace shell ----------------------------------------------------------------------- */
+
+.workspace-status-screen {
+  display: grid;
+  min-height: 60vh;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.workspace-status-screen [role="alert"] {
+  max-width: 520px;
+  color: #b3261e;
+}
+
+.workspace-status-screen__retry,
+.workspace-banner button,
+.notification-heading button,
+.notification-review-link,
+.utility-popover > button,
+.more-views__menu button {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-brand);
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.mode-toggle {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.mode-toggle button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mode-toggle button.is-selected {
+  color: #fff;
+  background: var(--color-brand);
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 24px;
+}
+
+.dashboard-actions .dashboard-quick-setup {
+  margin: 0;
+}
+
+.dashboard-review-shortcut {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #8b9b90;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.workspace-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 24px 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-brand-soft);
+  font-size: 14px;
+}
+
+.workspace-banner > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workspace-banner--error {
+  border-color: #e3b4b0;
+  color: #8c1d18;
+  background: #fdf0ef;
+}
+
+.workspace-banner--missed {
+  border-color: #e6cf9c;
+  background: #fff8e8;
+}
+
+.workspace-banner button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.utility-popover {
+  z-index: 20;
+  max-width: min(360px, calc(100vw - 32px));
+}
+
+.notification-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notification-list {
+  max-height: 360px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button.notification-item {
+  width: 100%;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.notification-item--unread {
+  box-shadow: inset 3px 0 0 var(--color-brand);
+}
+
+.notification-item small {
+  color: var(--color-muted);
+}
+
+.more-views {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.more-views .workspace-layout-toggle {
+  margin-left: 0;
+}
+
+.more-views__menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 220px;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(39 46 42 / 10%);
+}
+
+.more-views__menu button {
+  border: 0;
+  text-align: left;
+}
+
+/* The More menu drops below the tab bar, so the bar can't clip it. */
+.workspace-tabs:has(.more-views__menu) {
+  overflow: visible;
+}
+
+/* --- To-do list ---------------------------------------------------------------------------- */
+
+.todo-task--focused {
+  border-radius: 6px;
+  outline: 2px solid var(--color-brand, #406b51);
+  outline-offset: -2px;
+}
+
+.todo-badge--muted {
+  color: var(--color-muted, #66746b);
+  background: var(--color-brand-soft, #eef3ef);
+}
+
+.todo-quick-add__select,
+.todo-repeat-row select,
+.todo-repeat-row input,
+.priority-reminders select,
+.settings-availability select,
+.breakdown-goal-picker select,
+.breakdown-priority-control select,
+.breakdown-add-milestone input,
+.breakdown-add-milestone select,
+.breakdown-goal-item select {
+  min-height: 32px;
+  border: 1px solid var(--color-border, #dfe6e1);
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.todo-repeat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 16px 8px;
+  color: var(--color-muted, #66746b);
+  font-size: 13px;
+}
+
+.todo-repeat-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-repeat-row input {
+  width: 56px;
+}
+
+/* --- Priority setter ----------------------------------------------------------------------- */
+
+.priority-reminders {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #dfe6e1);
+  border-radius: 8px;
+}
+
+.priority-reminders > span {
+  display: flex;
+  min-width: 200px;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.priority-reminders > span > span {
+  color: var(--color-muted, #66746b);
+  font-size: 13px;
+}
+
+.priority-announcement--error {
+  color: #b3261e;
+}
+
+/* --- Goals --------------------------------------------------------------------------------- */
+
+.goals-error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #8c1d18;
+  background: #fdf0ef;
+}
+
+.goals-column__empty {
+  margin: 0;
+  color: var(--color-muted, #66746b);
+  font-size: 13px;
+}
+
+.goal-card--linked {
+  border-left: 3px solid #7da28a;
+}
+
+.goal-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.goal-card__actions button {
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px solid var(--color-border, #dfe6e1);
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.goal-card__actions .goal-card__danger {
+  border-color: #b3261e;
+  color: #fff;
+  background: #b3261e;
+}
+
+.goal-card__actions span {
+  color: var(--color-muted, #66746b);
+}
+
+/* --- Breakdown ----------------------------------------------------------------------------- */
+
+.breakdown-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.breakdown-goal-picker,
+.breakdown-priority-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.breakdown-summary__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.breakdown-milestone__date {
+  min-height: 24px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+}
+
+.breakdown-milestone__date:hover,
+.breakdown-milestone__date:focus {
+  border-color: var(--color-border);
+}
+
+.breakdown-complete-goal,
+.breakdown-add-milestone button,
+button.breakdown-goal-priority {
+  min-height: 32px;
+  align-self: flex-start;
+  padding: 4px 12px;
+  border: 1px solid var(--color-brand);
+  border-radius: 6px;
+  color: var(--color-brand);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.breakdown-milestone__overdue {
+  color: #b3261e;
+}
+
+.breakdown-milestone__delete {
+  margin-left: auto;
+  padding: 0 6px;
+  border: 0;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.breakdown-add-milestone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.breakdown-add-milestone label {
+  display: flex;
+  min-width: 140px;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+button.breakdown-connected-goal {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.breakdown-connected-goal__track {
+  overflow: hidden;
+  height: 4px;
+  border-radius: 2px;
+  background: #e4e8e3;
+}
+
+.breakdown-connected-goal__track span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: #7da28a;
+}
+
+ul.breakdown-goal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --- Visual planner and Quick Setup -------------------------------------------------------- */
+
+.planner-priority-filter {
+  min-width: 180px;
+  padding: 8px;
+}
+
+.planner-priority-filter__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.planner-repeat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.planner-repeat input {
+  width: 64px;
+}
+
+@media (min-width: 801px) {
+  /* Quick Setup rows gained a priority column. */
+  .quick-setup fieldset {
+    grid-template-columns: 2fr 1.4fr 1fr 1fr 1fr auto;
+  }
+}
+
+/* --- Settings: open time slots ------------------------------------------------------------- */
+
+.settings-availability {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-availability li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- Dark mode ----------------------------------------------------------------------------- */
+
+html[data-theme="dark"] :is(
+  .workspace-status-screen__retry,
+  .workspace-banner button,
+  .notification-heading button,
+  .notification-review-link,
+  .utility-popover > button,
+  .more-views__menu,
+  .more-views__menu button,
+  .utility-popover,
+  .notification-item
+) {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-raised);
+}
+
+html[data-theme="dark"] :is(.workspace-banner, .goals-error) {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-subtle);
+}
+
+html[data-theme="dark"] :is(
+  .todo-quick-add__select,
+  .todo-repeat-row select,
+  .todo-repeat-row input,
+  .priority-reminders select,
+  .settings-availability select,
+  .breakdown-goal-picker select,
+  .breakdown-priority-control select,
+  .breakdown-add-milestone input,
+  .breakdown-add-milestone select,
+  .breakdown-goal-item select
+) {
+  border-color: var(--theme-border);
+  background: var(--theme-input);
+}
+
+@media (max-width: 700px) {
+  .dashboard-actions,
+  .workspace-banner {
+    margin-inline: 16px;
+  }
+}

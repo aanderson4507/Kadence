@@ -1,17 +1,16 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import type { Priority, Task } from "./TodoList";
-import { describeUrgency, sortTasksByPriority, todayKey } from "./taskPriority";
+import { useEffect, useState } from "react";
+import type { ReminderRule, Task, TaskChanges } from "./api";
+import { errorMessage } from "./http";
+import { describeUrgency, sortTasksByPriority, todayKey, type Priority } from "./taskPriority";
 import "./PrioritySetter.css";
 
 type PrioritySetterProps = {
   tasks: Task[];
-  setTasks: Dispatch<SetStateAction<Task[]>>;
+  reminderRules: ReminderRule[];
+  onUpdate: (taskId: string, changes: TaskChanges) => Promise<Task>;
 };
 
-const priorityOptions: {
-  value: Priority;
-  description: string;
-}[] = [
+const priorityOptions: { value: Priority; description: string }[] = [
   { value: "Very High", description: "Needs your immediate attention." },
   { value: "High", description: "Make time for this soon." },
   { value: "Medium", description: "Keep it moving alongside other work." },
@@ -20,14 +19,20 @@ const priorityOptions: {
   { value: "None", description: "Leave this item without a priority." },
 ];
 
-function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
+/** "Use priority default" plus explicit levels (user story 2.6, issue #13). */
+const reminderLevels = [0, 1, 2, 3, 4, 6, 8];
+const reminderLabel = (count: number) =>
+  count === 0 ? "No reminders" : `${count} ${count === 1 ? "reminder" : "reminders"} a day`;
+
+function PrioritySetter({ tasks, reminderRules, onUpdate }: PrioritySetterProps) {
   const [selectedTaskId, setSelectedTaskId] = useState(tasks[0]?.id ?? "");
   const [searchQuery, setSearchQuery] = useState("");
-  const [draftPriority, setDraftPriority] = useState<Priority>(
-    tasks[0]?.priority ?? "None",
-  );
+  const [draftPriority, setDraftPriority] = useState<Priority>(tasks[0]?.priority ?? "None");
   const [draftExam, setDraftExam] = useState(tasks[0]?.isExam ?? false);
+  const [draftReminders, setDraftReminders] = useState<number | null>(tasks[0]?.remindersPerDay ?? null);
+  const [saving, setSaving] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const [error, setError] = useState("");
   const today = todayKey();
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId);
@@ -43,91 +48,103 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
     }),
     today,
   );
+  const ruleFor = (priority: Priority) => reminderRules.find((rule) => rule.priority === priority)?.remindersPerDay;
+  const priorityDefault = ruleFor(draftPriority);
   const hasChanges =
     selectedTask !== undefined &&
-    (draftPriority !== selectedTask.priority || draftExam !== Boolean(selectedTask.isExam));
+    (draftPriority !== selectedTask.priority ||
+      draftExam !== Boolean(selectedTask.isExam) ||
+      draftReminders !== selectedTask.remindersPerDay);
+
+  function selectTask(task: Task) {
+    setSelectedTaskId(task.id);
+    setDraftPriority(task.priority);
+    setDraftExam(Boolean(task.isExam));
+    setDraftReminders(task.remindersPerDay);
+    setAnnouncement("");
+    setError("");
+  }
 
   useEffect(() => {
     if (tasks.length === 0) {
       setSelectedTaskId("");
       return;
     }
-
     if (!tasks.some((task) => task.id === selectedTaskId)) {
       setSelectedTaskId(tasks[0].id);
       setDraftPriority(tasks[0].priority);
       setDraftExam(Boolean(tasks[0].isExam));
+      setDraftReminders(tasks[0].remindersPerDay);
     }
   }, [selectedTaskId, tasks]);
-
-  function selectTask(task: Task) {
-    setSelectedTaskId(task.id);
-    setDraftPriority(task.priority);
-    setDraftExam(Boolean(task.isExam));
-    setAnnouncement("");
-  }
 
   function resetPriority() {
     if (!selectedTask) return;
     setDraftPriority(selectedTask.priority);
     setDraftExam(Boolean(selectedTask.isExam));
-    setAnnouncement("Priority reset to its current value.");
+    setDraftReminders(selectedTask.remindersPerDay);
+    setError("");
+    setAnnouncement("Reset to the saved values.");
   }
 
-  function savePriority() {
-    if (!selectedTask) return;
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === selectedTask.id
-          ? { ...task, priority: draftPriority, isExam: draftExam }
-          : task,
-      ),
-    );
-    const examNote =
-      draftExam && !selectedTask.isExam
-        ? selectedTask.dueDate
-          ? " Study sessions were added to your planner."
-          : " Add a due date in the To-do list to schedule study sessions."
-        : !draftExam && selectedTask.isExam
-          ? " Its study sessions were removed."
-          : "";
-    setAnnouncement(`Priority saved as ${draftPriority}.${examNote}`);
+  async function savePriority() {
+    if (!selectedTask || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onUpdate(selectedTask.id, {
+        priority: draftPriority,
+        isExam: draftExam,
+        remindersPerDay: draftReminders,
+      });
+      const examNote =
+        draftExam && !selectedTask.isExam
+          ? selectedTask.dueDate
+            ? " Study sessions were added to your planner."
+            : " Add a due date in the To-do list to schedule study sessions."
+          : !draftExam && selectedTask.isExam
+            ? " Its study sessions were removed."
+            : "";
+      setAnnouncement(`Saved: ${draftPriority} priority.${examNote}`);
+    } catch (saveError) {
+      // The choices stay selected so Save can be tried again.
+      setError(errorMessage(saveError));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <section aria-label="Priority setter" className="priority-setter">
       <header className="priority-setter__heading">
         <h1>Priority setter</h1>
-        <p>Choose a task or goal and give it the focus it deserves.</p>
+        <p>Choose a task and give it the focus, and the reminders, it deserves.</p>
       </header>
 
       <div className="priority-editor">
-        <section
-          aria-labelledby="priority-task-heading"
-          className="priority-task-selection"
-        >
+        <section aria-labelledby="priority-task-heading" className="priority-task-selection">
           <div className="priority-panel-heading">
-            <h2 id="priority-task-heading">Select a task or goal</h2>
-            <p>Choose one item to set its priority.</p>
+            <h2 id="priority-task-heading">Select a task</h2>
+            <p>Choose one item to set its priority and reminders.</p>
           </div>
 
           <label className="priority-search">
             <img alt="" src="/assets/priority-search.svg" />
-            <span className="visually-hidden">Search tasks and goals</span>
+            <span className="visually-hidden">Search tasks</span>
             <input
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search tasks and goals..."
+              placeholder="Search tasks..."
               type="search"
               value={searchQuery}
             />
           </label>
 
           <div aria-hidden="true" className="priority-list-labels">
-            <span>Task / Goal</span>
+            <span>Task</span>
             <span>Priority</span>
           </div>
 
-          <ul aria-label="Tasks and goals" className="priority-task-list">
+          <ul aria-label="Tasks" className="priority-task-list">
             {filteredTasks.map((task) => {
               const isSelected = selectedTask?.id === task.id;
               return (
@@ -139,15 +156,11 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
                     type="button"
                   >
                     <span aria-hidden="true" className="priority-task__indicator">
-                      {isSelected && (
-                        <img alt="" src="/assets/priority-selection.svg" />
-                      )}
+                      {isSelected && <img alt="" src="/assets/priority-selection.svg" />}
                     </span>
                     <span className="priority-task__details">
                       <strong>{task.title}</strong>
-                      <span>
-                        {[task.category, describeUrgency(task, today)].filter(Boolean).join(" · ")}
-                      </span>
+                      <span>{[task.category, describeUrgency(task, today)].filter(Boolean).join(" · ")}</span>
                     </span>
                     <span className="priority-task__value">{task.priority}</span>
                   </button>
@@ -157,22 +170,19 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
             {filteredTasks.length === 0 && (
               <li>
                 <p className="priority-empty" role="status">
-                  No tasks or goals match your search.
+                  {tasks.length === 0 ? "No tasks yet. Add one in the To-do list." : "No tasks match your search."}
                 </p>
               </li>
             )}
           </ul>
 
           <footer className="priority-selection-summary">
-            <span>{tasks.length} tasks and goals</span>
+            <span>{tasks.length} tasks</span>
             <strong>{selectedTask ? "1 selected" : "0 selected"}</strong>
           </footer>
         </section>
 
-        <section
-          aria-labelledby="priority-settings-heading"
-          className="priority-settings"
-        >
+        <section aria-labelledby="priority-settings-heading" className="priority-settings">
           <div className="priority-settings__form">
             <div className="priority-panel-heading">
               <h2 id="priority-settings-heading">Set priority</h2>
@@ -195,10 +205,7 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
                   {priorityOptions.map(({ value, description }) => {
                     const isSelected = draftPriority === value;
                     return (
-                      <label
-                        className={`priority-choice${isSelected ? " priority-choice--selected" : ""}`}
-                        key={value}
-                      >
+                      <label className={`priority-choice${isSelected ? " priority-choice--selected" : ""}`} key={value}>
                         <input
                           checked={isSelected}
                           className="priority-choice__input"
@@ -211,25 +218,43 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
                           value={value}
                         />
                         <span aria-hidden="true" className="priority-choice__radio">
-                          {isSelected && (
-                            <img alt="" src="/assets/priority-radio.svg" />
-                          )}
+                          {isSelected && <img alt="" src="/assets/priority-radio.svg" />}
                         </span>
                         <span className="priority-choice__details">
                           <strong>{value}</strong>
                           <span>{description}</span>
                         </span>
-                        {isSelected && (
-                          <span className="priority-choice__selected">Selected</span>
-                        )}
+                        {isSelected && <span className="priority-choice__selected">Selected</span>}
                       </label>
                     );
                   })}
                 </fieldset>
 
-                <label
-                  className={`priority-exam-option${draftExam ? " priority-exam-option--selected" : ""}`}
-                >
+                <label className="priority-reminders">
+                  <span>
+                    <strong>Reminder frequency</strong>
+                    <span>How aggressively Kadence reminds you about this task while it&apos;s due within a week.</span>
+                  </span>
+                  <select
+                    onChange={(event) => {
+                      setDraftReminders(event.target.value === "" ? null : Number(event.target.value));
+                      setAnnouncement("");
+                    }}
+                    value={draftReminders ?? ""}
+                  >
+                    <option value="">
+                      Use the {draftPriority} default
+                      {priorityDefault !== undefined ? ` (${reminderLabel(priorityDefault).toLowerCase()})` : ""}
+                    </option>
+                    {reminderLevels.map((count) => (
+                      <option key={count} value={count}>
+                        {reminderLabel(count)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={`priority-exam-option${draftExam ? " priority-exam-option--selected" : ""}`}>
                   <input
                     checked={draftExam}
                     onChange={(event) => {
@@ -249,31 +274,30 @@ function PrioritySetter({ tasks, setTasks }: PrioritySetterProps) {
                 </label>
               </>
             ) : (
-              <p className="priority-empty priority-empty--settings">
-                Select a task to set its priority.
-              </p>
+              <p className="priority-empty priority-empty--settings">Select a task to set its priority.</p>
             )}
           </div>
 
           <div className="priority-actions">
-            <button
-              className="priority-reset"
-              disabled={!hasChanges}
-              onClick={resetPriority}
-              type="button"
-            >
+            <button className="priority-reset" disabled={!hasChanges || saving} onClick={resetPriority} type="button">
               Reset
             </button>
             <button
+              aria-busy={saving}
               className="priority-save"
-              disabled={!hasChanges}
-              onClick={savePriority}
+              disabled={!hasChanges || saving}
+              onClick={() => void savePriority()}
               type="button"
             >
               <img alt="" src="/assets/priority-check.svg" />
-              <span>Save priority</span>
+              <span>{saving ? "Saving…" : "Save priority"}</span>
             </button>
           </div>
+          {error && (
+            <p className="priority-announcement priority-announcement--error" role="alert">
+              {error}
+            </p>
+          )}
           <p aria-live="polite" className="priority-announcement" role="status">
             {announcement}
           </p>

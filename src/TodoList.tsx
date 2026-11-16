@@ -1,129 +1,62 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type Dispatch,
-  type FormEvent,
-  type KeyboardEvent,
-  type SetStateAction,
-} from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import "./TodoList.css";
-import {
-  addDaysToKey,
-  describeUrgency,
-  sortTasksByPriority,
-  todayKey,
-  type Priority,
-} from "./taskPriority";
+import type { Repeat, RepeatFrequency, Task, TaskChanges, TaskInput } from "./api";
+import { errorMessage } from "./http";
+import { PRIORITY_LEVELS, describeUrgency, sortTasksByPriority, todayKey, type Priority } from "./taskPriority";
 
-export type { Priority };
+export type { Priority, Task };
 type TaskStatus = "All tasks" | "Active" | "Completed";
-
-export type Task = {
-  id: string;
-  title: string;
-  category: string;
-  priority: Priority;
-  completed: boolean;
-  dueDate?: string;
-  completedDate?: string;
-  /** Exams get study sessions scheduled in the days before their due date. */
-  isExam?: boolean;
-};
-
-export const initialTasks: Task[] = [
-  {
-    id: "calc-exam-2",
-    title: "Calculus Exam 2",
-    category: "Study",
-    priority: "Very High",
-    completed: false,
-    dueDate: addDaysToKey(todayKey(), 6),
-    isExam: true,
-  },
-  {
-    id: "calc-review",
-    title: "Complete Test Review for Calc.",
-    category: "Study",
-    priority: "High",
-    completed: false,
-  },
-  {
-    id: "python-project",
-    title: "Finish Part 2 of python project",
-    category: "Coding",
-    priority: "High",
-    completed: true,
-  },
-  {
-    id: "elevator-pitch",
-    title: "Practice Elevator Pitch for Next Week",
-    category: "Career",
-    priority: "High",
-    completed: false,
-  },
-  {
-    id: "resume-experience",
-    title: "Update experience/projects section on Resume",
-    category: "Career",
-    priority: "High",
-    completed: true,
-  },
-  {
-    id: "apply-jobs",
-    title: "Apply to jobs",
-    category: "Career",
-    priority: "Medium",
-    completed: false,
-  },
-  {
-    id: "gym-pr",
-    title: "Hit a new PR in gym",
-    category: "Fitness",
-    priority: "None",
-    completed: false,
-  },
-];
-
-function getTodayDateString() {
-  const today = new Date();
-
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
+type PriorityFilter = Priority | "All priorities";
 
 const taskStatuses: TaskStatus[] = ["All tasks", "Active", "Completed"];
-const priorities: Priority[] = ["Very High", "High", "Medium", "Low", "Very Low", "None"];
+const filterOptions: PriorityFilter[] = ["All priorities", ...PRIORITY_LEVELS];
+const repeatOptions: { value: RepeatFrequency | ""; label: string; unit: string }[] = [
+  { value: "", label: "Doesn't repeat", unit: "" },
+  { value: "DAILY", label: "Every day", unit: "days" },
+  { value: "WEEKLY", label: "Every week", unit: "weeks" },
+  { value: "MONTHLY", label: "Every month", unit: "months" },
+];
+
+function formatDate(dateKey: string) {
+  return new Date(`${dateKey}T00:00:00`).toLocaleDateString();
+}
 
 type TodoListProps = {
   tasks: Task[];
-  setTasks: Dispatch<SetStateAction<Task[]>>;
+  onCreate: (input: TaskInput) => Promise<{ task: Task; occurrenceCount: number }>;
+  onUpdate: (taskId: string, changes: TaskChanges) => Promise<Task>;
+  onDelete: (taskId: string, scope?: "one" | "series") => Promise<void>;
+  /** Set when a notification or the Breakdown page opens a task. */
+  focusTaskId: { id: string; nonce: number } | null;
 };
 
-function TodoList({ tasks, setTasks }: TodoListProps) {
+function TodoList({ tasks, onCreate, onUpdate, onDelete, focusTaskId }: TodoListProps) {
   const [taskStatus, setTaskStatus] = useState<TaskStatus>("All tasks");
-  const [priorityFilter, setPriorityFilter] = useState<Priority>("High");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("All priorities");
   const [priorityMenuOpen, setPriorityMenuOpen] = useState(false);
-  const [activePriorityIndex, setActivePriorityIndex] = useState(
-    priorities.indexOf("High"),
-  );
+  const [activePriorityIndex, setActivePriorityIndex] = useState(0);
   const [showCompleted, setShowCompleted] = useState(true);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState<Priority>("Medium");
   const [newTaskIsExam, setNewTaskIsExam] = useState(false);
+  const [newTaskRepeat, setNewTaskRepeat] = useState<RepeatFrequency | "">("");
+  const [newTaskRepeatCount, setNewTaskRepeatCount] = useState(4);
+  const [saving, setSaving] = useState(false);
+  const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [quickAddError, setQuickAddError] = useState("");
+  const [listError, setListError] = useState("");
   const [openTaskMenu, setOpenTaskMenu] = useState<string | null>(null);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const quickAddInput = useRef<HTMLInputElement>(null);
   const priorityMenuRef = useRef<HTMLDivElement>(null);
   const priorityTriggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const today = todayKey();
   const priorityTasks = sortTasksByPriority(
-    tasks.filter((task) => task.priority === priorityFilter),
+    priorityFilter === "All priorities" ? tasks : tasks.filter((task) => task.priority === priorityFilter),
     today,
   );
   const activeCount = priorityTasks.filter((task) => !task.completed).length;
@@ -135,93 +68,117 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
     return true;
   });
   const remainingLabel =
-    priorityFilter === "None"
-      ? "tasks with no priority"
-      : `${priorityFilter.toLowerCase()}-priority tasks`;
+    priorityFilter === "All priorities"
+      ? "tasks"
+      : priorityFilter === "None"
+        ? "tasks with no priority"
+        : `${priorityFilter.toLowerCase()}-priority tasks`;
+  const quickAddPriority = priorityFilter === "All priorities" ? newTaskPriority : priorityFilter;
 
   useEffect(() => {
     if (!priorityMenuOpen) return;
-
     function closeOnOutsideClick(event: PointerEvent) {
-      if (!priorityMenuRef.current?.contains(event.target as Node)) {
-        setPriorityMenuOpen(false);
-      }
+      if (!priorityMenuRef.current?.contains(event.target as Node)) setPriorityMenuOpen(false);
     }
-
     document.addEventListener("pointerdown", closeOnOutsideClick);
     return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
   }, [priorityMenuOpen]);
 
-  function addTask(event: FormEvent<HTMLFormElement>) {
+  // Opening a task from a notification shows it, whatever filters were set (issue #4).
+  useEffect(() => {
+    if (!focusTaskId) return;
+    setPriorityFilter("All priorities");
+    setTaskStatus("All tasks");
+    setShowCompleted(true);
+    setHighlightedTaskId(focusTaskId.id);
+    const frame = requestAnimationFrame(() => {
+      listRef.current
+        ?.querySelector<HTMLElement>(`[data-task-id="${focusTaskId.id}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    const timer = window.setTimeout(() => setHighlightedTaskId(null), 4000);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [focusTaskId]);
+
+  async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const title = newTaskTitle.trim();
-    if (!title) return;
+    if (!title) {
+      setQuickAddError("Give the task a name.");
+      return;
+    }
     if (newTaskIsExam && !newTaskDueDate) {
       setQuickAddError("Add the exam date so Kadence can schedule study sessions before it.");
       return;
     }
+    if (newTaskRepeat && !newTaskDueDate) {
+      setQuickAddError("Add a due date for the first time this task happens.");
+      return;
+    }
+    const repeat: Repeat = newTaskRepeat ? { frequency: newTaskRepeat, count: newTaskRepeatCount } : null;
 
-    const task: Task = {
-      id: crypto.randomUUID(),
-      title,
-      category: "General",
-      priority: priorityFilter,
-      completed: false,
-      ...(newTaskDueDate && { dueDate: newTaskDueDate }),
-      ...(newTaskIsExam && { isExam: true, category: "Exam" }),
-    };
-    setTasks((currentTasks) => [...currentTasks, task]);
-    setTaskStatus("All tasks");
-    setShowCompleted(true);
-    setNewTaskTitle("");
-    setNewTaskDueDate("");
-    setNewTaskIsExam(false);
+    setSaving(true);
     setQuickAddError("");
-    setAnnouncement(
-      newTaskIsExam ? `Added exam: ${title}. Study sessions were added to your planner.` : `Added task: ${title}`,
-    );
+    try {
+      const { occurrenceCount } = await onCreate({
+        title,
+        priority: quickAddPriority,
+        dueDate: newTaskDueDate || undefined,
+        isExam: newTaskIsExam,
+        category: newTaskIsExam ? "Exam" : undefined,
+        repeat,
+      });
+      setTaskStatus("All tasks");
+      setShowCompleted(true);
+      setNewTaskTitle("");
+      setNewTaskDueDate("");
+      setNewTaskIsExam(false);
+      setNewTaskRepeat("");
+      setAnnouncement(
+        newTaskIsExam
+          ? `Added exam: ${title}. Study sessions were added to your planner.`
+          : occurrenceCount > 1
+            ? `Added ${title}, repeating ${occurrenceCount} times.`
+            : `Added task: ${title}`,
+      );
+      quickAddInput.current?.focus();
+    } catch (error) {
+      // The typed task stays in the box so nothing is lost.
+      setQuickAddError(errorMessage(error));
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function toggleTask(taskId: string) {
-    const task = tasks.find((item) => item.id === taskId);
-    if (!task) return;
+  async function runTaskAction(task: Task, action: () => Promise<unknown>, success: string) {
+    setBusyTaskId(task.id);
+    setListError("");
+    setOpenTaskMenu(null);
+    try {
+      await action();
+      setAnnouncement(success);
+    } catch (error) {
+      setListError(errorMessage(error));
+    } finally {
+      setBusyTaskId(null);
+    }
+  }
 
-    setTasks((currentTasks) =>
-      currentTasks.map((item) =>
-        item.id === taskId
-          ? {
-              ...item,
-              completed: !item.completed,
-              completedDate: !item.completed
-                ? getTodayDateString()
-                : undefined,
-            }
-          : item,
-      ),
-    );
-
-    setAnnouncement(
+  function toggleTask(task: Task) {
+    void runTaskAction(
+      task,
+      () => onUpdate(task.id, { completed: !task.completed }),
       `${task.completed ? "Reopened" : "Completed"} task: ${task.title}`,
     );
   }
 
-  function deleteTask(taskId: string) {
-    const task = tasks.find((item) => item.id === taskId);
-    if (!task) return;
-
-    setTasks((currentTasks) => currentTasks.filter((item) => item.id !== taskId));
-    setOpenTaskMenu(null);
-    setAnnouncement(`Deleted task: ${task.title}`);
-  }
-
-  function toggleExam(taskId: string) {
-    const task = tasks.find((item) => item.id === taskId);
-    if (!task) return;
-    setTasks((currentTasks) =>
-      currentTasks.map((item) => (item.id === taskId ? { ...item, isExam: !item.isExam } : item)),
-    );
-    setOpenTaskMenu(null);
-    setAnnouncement(
+  function toggleExam(task: Task) {
+    void runTaskAction(
+      task,
+      () => onUpdate(task.id, { isExam: !task.isExam }),
       task.isExam
         ? `${task.title} is no longer marked as an exam.`
         : task.dueDate
@@ -230,11 +187,29 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
     );
   }
 
-  function selectPriority(priority: Priority) {
+  function toggleBacklog(task: Task) {
+    void runTaskAction(
+      task,
+      () => onUpdate(task.id, { inBacklog: !task.inBacklog }),
+      task.inBacklog ? `${task.title} moved out of the backlog.` : `${task.title} moved to the backlog.`,
+    );
+  }
+
+  function deleteTask(task: Task, scope: "one" | "series") {
+    void runTaskAction(
+      task,
+      () => onDelete(task.id, scope),
+      scope === "series" ? `Deleted every upcoming ${task.title}` : `Deleted task: ${task.title}`,
+    );
+  }
+
+  function selectPriority(priority: PriorityFilter) {
     setPriorityFilter(priority);
     setTaskStatus("All tasks");
     setPriorityMenuOpen(false);
-    setAnnouncement(`Showing ${priority.toLowerCase()}-priority tasks`);
+    setAnnouncement(
+      priority === "All priorities" ? "Showing every task" : `Showing ${priority.toLowerCase()}-priority tasks`,
+    );
   }
 
   function handlePriorityMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -244,20 +219,15 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
       priorityTriggerRef.current?.focus();
       return;
     }
-
     let nextIndex = activePriorityIndex;
-    if (event.key === "ArrowDown") nextIndex = (activePriorityIndex + 1) % priorities.length;
-    else if (event.key === "ArrowUp") {
-      nextIndex = (activePriorityIndex - 1 + priorities.length) % priorities.length;
-    } else if (event.key === "Home") nextIndex = 0;
-    else if (event.key === "End") nextIndex = priorities.length - 1;
+    if (event.key === "ArrowDown") nextIndex = (activePriorityIndex + 1) % filterOptions.length;
+    else if (event.key === "ArrowUp") nextIndex = (activePriorityIndex - 1 + filterOptions.length) % filterOptions.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = filterOptions.length - 1;
     else return;
-
     event.preventDefault();
     setActivePriorityIndex(nextIndex);
-    priorityMenuRef.current
-      ?.querySelectorAll<HTMLButtonElement>('[role="option"]')
-      [nextIndex]?.focus();
+    priorityMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]')[nextIndex]?.focus();
   }
 
   return (
@@ -267,11 +237,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
           <h1>To-do list</h1>
           <p>Make space for your most important tasks.</p>
         </div>
-        <button
-          className="todo-add-button"
-          onClick={() => quickAddInput.current?.focus()}
-          type="button"
-        >
+        <button className="todo-add-button" onClick={() => quickAddInput.current?.focus()} type="button">
           <img src="/assets/add.svg" alt="" />
           <span>Add task</span>
         </button>
@@ -295,7 +261,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                 aria-haspopup="listbox"
                 className={`priority-select-trigger${priorityMenuOpen ? " priority-select-trigger--open" : ""}`}
                 onClick={() => {
-                  setActivePriorityIndex(priorities.indexOf(priorityFilter));
+                  setActivePriorityIndex(filterOptions.indexOf(priorityFilter));
                   setPriorityMenuOpen((open) => !open);
                 }}
                 onKeyDown={(event) => {
@@ -307,7 +273,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                     event.preventDefault();
                     setPriorityMenuOpen(true);
-                    const selectedIndex = priorities.indexOf(priorityFilter);
+                    const selectedIndex = filterOptions.indexOf(priorityFilter);
                     setActivePriorityIndex(selectedIndex);
                     requestAnimationFrame(() => {
                       priorityMenuRef.current
@@ -323,11 +289,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                   <img alt="" src="/assets/priority-dropdown-flag.svg" />
                   <span>{priorityFilter}</span>
                 </span>
-                <img
-                  alt=""
-                  className="priority-select-chevron"
-                  src="/assets/priority-dropdown-chevron.svg"
-                />
+                <img alt="" className="priority-select-chevron" src="/assets/priority-dropdown-chevron.svg" />
               </button>
               {priorityMenuOpen && (
                 <div
@@ -337,7 +299,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                   onKeyDown={handlePriorityMenuKeyDown}
                   role="listbox"
                 >
-                  {priorities.map((priority, index) => (
+                  {filterOptions.map((priority, index) => (
                     <button
                       aria-selected={priorityFilter === priority}
                       className={`priority-option${priorityFilter === priority ? " priority-option--selected" : ""}`}
@@ -369,12 +331,7 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
           <div aria-label="Filter tasks by status" className="todo-status-tabs" role="group">
             {taskStatuses.map((status) => {
               const count =
-                status === "All tasks"
-                  ? priorityTasks.length
-                  : status === "Active"
-                    ? activeCount
-                    : completedCount;
-
+                status === "All tasks" ? priorityTasks.length : status === "Active" ? activeCount : completedCount;
               return (
                 <button
                   aria-pressed={taskStatus === status}
@@ -401,23 +358,22 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
             <span>
               {completedCount} of {priorityTasks.length} complete
             </span>
-            <span
-              aria-hidden="true"
-              className="todo-progress-track"
-              role="presentation"
-            >
+            <span aria-hidden="true" className="todo-progress-track" role="presentation">
               <span
                 className="todo-progress-fill"
                 style={{
-                  width:
-                    priorityTasks.length === 0
-                      ? "0%"
-                      : `${(completedCount / priorityTasks.length) * 100}%`,
+                  width: priorityTasks.length === 0 ? "0%" : `${(completedCount / priorityTasks.length) * 100}%`,
                 }}
               />
             </span>
           </div>
         </div>
+
+        {listError && (
+          <p className="todo-quick-add-error" role="alert">
+            {listError}
+          </p>
+        )}
 
         <div aria-hidden="true" className="todo-column-labels">
           <span>Task</span>
@@ -425,17 +381,20 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
           <span />
         </div>
 
-        <ul aria-label="Tasks" className="todo-task-list">
+        <ul aria-label="Tasks" className="todo-task-list" ref={listRef}>
           {visibleTasks.map((task) => (
             <li
-              className={`todo-task${task.completed ? " todo-task--completed" : ""}`}
+              aria-busy={busyTaskId === task.id}
+              className={`todo-task${task.completed ? " todo-task--completed" : ""}${highlightedTaskId === task.id ? " todo-task--focused" : ""}`}
+              data-task-id={task.id}
               key={task.id}
             >
               <button
                 aria-checked={task.completed}
                 aria-label={`${task.completed ? "Mark incomplete" : "Complete"} ${task.title}`}
                 className="todo-task-checkbox"
-                onClick={() => toggleTask(task.id)}
+                disabled={busyTaskId === task.id}
+                onClick={() => toggleTask(task)}
                 role="checkbox"
                 type="button"
               >
@@ -446,12 +405,16 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                 <span className="todo-task-title">{task.title}</span>
                 <span className="todo-task-category">
                   {task.isExam && <span className="todo-exam-badge">Exam</span>}
+                  {task.inBacklog && <span className="todo-exam-badge todo-badge--muted">Backlog</span>}
+                  {task.seriesId && <span className="todo-exam-badge todo-badge--muted">Repeats</span>}
                   {task.category}
                 </span>
                 {task.dueDate && (
                   <span className="todo-task-due-date">
-                  Due {new Date(`${task.dueDate}T00:00:00`).toLocaleDateString()}
-                  {!task.completed && ` · ${describeUrgency({ ...task, isExam: false }, today)}`}
+                    Due {formatDate(task.dueDate)}
+                    {!task.completed && describeUrgency({ ...task, isExam: false }, today) &&
+                      ` · ${describeUrgency({ ...task, isExam: false }, today)}`}
+                    {task.originalDueDate && ` · rescheduled from ${formatDate(task.originalDueDate)}`}
                   </span>
                 )}
                 {task.isExam && !task.dueDate && !task.completed && (
@@ -459,17 +422,12 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                     Add a due date to schedule study sessions
                   </span>
                 )}
-              
               </div>
 
               <div className="todo-task-priority">
                 <span className="todo-priority-badge">
                   <img
-                    src={
-                      task.completed
-                        ? "/assets/priority-flag-muted.svg"
-                        : "/assets/priority-flag-badge.svg"
-                    }
+                    src={task.completed ? "/assets/priority-flag-muted.svg" : "/assets/priority-flag-badge.svg"}
                     alt=""
                   />
                   <span>{task.priority}</span>
@@ -481,27 +439,29 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
                   aria-expanded={openTaskMenu === task.id}
                   aria-label={`Actions for ${task.title}`}
                   className="todo-task-menu-button"
-                  onClick={() =>
-                    setOpenTaskMenu((current) =>
-                      current === task.id ? null : task.id,
-                    )
-                  }
+                  onClick={() => setOpenTaskMenu((current) => (current === task.id ? null : task.id))}
                   type="button"
                 >
                   <img src="/assets/task-more.svg" alt="" />
                 </button>
                 {openTaskMenu === task.id && (
                   <div className="todo-task-menu">
-                    <button
-                      className="todo-task-menu__neutral"
-                      onClick={() => toggleExam(task.id)}
-                      type="button"
-                    >
+                    <button className="todo-task-menu__neutral" onClick={() => toggleExam(task)} type="button">
                       {task.isExam ? "Unmark as exam" : "Mark as exam"}
                     </button>
-                    <button onClick={() => deleteTask(task.id)} type="button">
+                    {!task.completed && (
+                      <button className="todo-task-menu__neutral" onClick={() => toggleBacklog(task)} type="button">
+                        {task.inBacklog ? "Move out of backlog" : "Move to backlog"}
+                      </button>
+                    )}
+                    <button onClick={() => deleteTask(task, "one")} type="button">
                       Delete task
                     </button>
+                    {task.seriesId && (
+                      <button onClick={() => deleteTask(task, "series")} type="button">
+                        Delete all unfinished repeats
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -510,25 +470,31 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
           {visibleTasks.length === 0 && (
             <li className="todo-empty-state">
               {priorityTasks.length === 0
-                ? "No tasks in this priority yet. Add one below."
+                ? priorityFilter === "All priorities"
+                  ? "No tasks yet. Add one below."
+                  : "No tasks in this priority yet. Add one below."
                 : taskStatus === "Completed"
-                ? "No completed tasks in this priority."
-                : taskStatus === "Active"
-                  ? "All tasks in this priority are complete."
-                  : "No tasks to show."}
+                  ? "No completed tasks here."
+                  : taskStatus === "Active"
+                    ? "Everything here is complete."
+                    : "No tasks to show."}
             </li>
           )}
         </ul>
 
-        <form className="todo-quick-add" onSubmit={addTask}>
+        <form className="todo-quick-add" onSubmit={(event) => void addTask(event)}>
           <img src="/assets/add-muted.svg" alt="" />
           <input
             aria-label="Add a task"
-            onChange={(event) => setNewTaskTitle(event.target.value)}
+            maxLength={200}
+            onChange={(event) => {
+              setNewTaskTitle(event.target.value);
+              setQuickAddError("");
+            }}
             placeholder={
-              priorityFilter === "None"
+              quickAddPriority === "None"
                 ? "Add a task with no priority..."
-                : `Add a ${priorityFilter.toLowerCase()}-priority task...`
+                : `Add a ${quickAddPriority.toLowerCase()}-priority task...`
             }
             ref={quickAddInput}
             value={newTaskTitle}
@@ -542,6 +508,20 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
             type="date"
             value={newTaskDueDate}
           />
+          {priorityFilter === "All priorities" && (
+            <select
+              aria-label="New task priority"
+              className="todo-quick-add__select"
+              onChange={(event) => setNewTaskPriority(event.target.value as Priority)}
+              value={newTaskPriority}
+            >
+              {PRIORITY_LEVELS.map((priority) => (
+                <option key={priority} value={priority}>
+                  {priority}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             aria-pressed={newTaskIsExam}
             className={`todo-exam-toggle${newTaskIsExam ? " todo-exam-toggle--on" : ""}`}
@@ -554,10 +534,38 @@ function TodoList({ tasks, setTasks }: TodoListProps) {
           >
             Exam
           </button>
-          <button aria-label="Add task" type="submit">
-            ↵
+          <button aria-label="Add task" disabled={saving} type="submit">
+            {saving ? "…" : "↵"}
           </button>
         </form>
+        <div className="todo-repeat-row">
+          <label>
+            <span>Repeat</span>
+            <select
+              onChange={(event) => setNewTaskRepeat(event.target.value as RepeatFrequency | "")}
+              value={newTaskRepeat}
+            >
+              {repeatOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {newTaskRepeat && (
+            <label>
+              <span>for</span>
+              <input
+                max={60}
+                min={2}
+                onChange={(event) => setNewTaskRepeatCount(Math.max(2, Math.min(60, Number(event.target.value) || 2)))}
+                type="number"
+                value={newTaskRepeatCount}
+              />
+              <span>{repeatOptions.find((option) => option.value === newTaskRepeat)?.unit}</span>
+            </label>
+          )}
+        </div>
         {quickAddError && (
           <p className="todo-quick-add-error" role="alert">
             {quickAddError}

@@ -1,6 +1,7 @@
 import {
   BackupPreference,
   CelebrationStyle,
+  DashboardMode,
   DeadlineHandling,
   GoalBreakdownMethod,
   GoalCategory,
@@ -16,7 +17,7 @@ import {
   UnfinishedReviewTime,
   UnfinishedTaskBehavior,
   WeekStart,
-  type Prisma,
+  Prisma,
   type UserSettings,
 } from "../generated/prisma/client.ts";
 import type { Db } from "../db.ts";
@@ -82,6 +83,40 @@ const reviewSummaryField: Parser = (value, name) => {
   return [...new Set(value)];
 };
 
+const MAX_TABS = 12;
+
+/**
+ * Open workspace tabs, their relative widths and split/tabbed mode (user stories 2.7 resize
+ * panels #8 and 1.5 simple main screen #6):
+ *   { views: [{ view: "To do", size: 1.2 }, ...], split: true, active: "To do" | null } or null.
+ */
+const tabLayoutField: Parser = (value, name) => {
+  // Prisma clears a nullable Json column with DbNull, not null.
+  if (value === null) return Prisma.DbNull;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new ValidationError(`${name} must be an object or null.`);
+  }
+  const { views, split, active } = value as Record<string, unknown>;
+  if (!Array.isArray(views) || views.length > MAX_TABS) {
+    throw new ValidationError(`${name}.views must be a list of at most ${MAX_TABS} tabs.`);
+  }
+  const parsedViews = views.map((item, index) => {
+    const tab = typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
+    if (typeof tab.view !== "string" || tab.view.trim() === "" || tab.view.length > 40) {
+      throw new ValidationError(`${name}.views[${index}].view must be a tab name.`);
+    }
+    if (typeof tab.size !== "number" || !Number.isFinite(tab.size) || tab.size <= 0 || tab.size > 100) {
+      throw new ValidationError(`${name}.views[${index}].size must be a number greater than 0.`);
+    }
+    return { view: tab.view, size: tab.size };
+  });
+  if (typeof split !== "boolean") throw new ValidationError(`${name}.split must be true or false.`);
+  if (active !== null && typeof active !== "string") {
+    throw new ValidationError(`${name}.active must be a tab name or null.`);
+  }
+  return { views: parsedViews, split, active };
+};
+
 /** Every preference the Settings page can change, keyed by its UserSettings column. */
 const PREFERENCE_PARSERS = {
   // Planner appearance and layout
@@ -91,6 +126,9 @@ const PREFERENCE_PARSERS = {
   weekStart: enumField(WeekStart),
   timeFormat: enumField(TimeFormat),
   landingPage: enumField(LandingPage),
+  // Main screen simplicity and resizable tabs
+  dashboardMode: enumField(DashboardMode),
+  tabLayout: tabLayoutField,
   // Notifications and reminders
   remindDailyPlanning: booleanField,
   remindUpcoming: booleanField,

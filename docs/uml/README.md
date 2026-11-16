@@ -2,10 +2,12 @@
 
 | Source | Rendered | Shows |
 |---|---|---|
-| `class-diagram.puml` | `kadence-class-diagram.png` / `.svg` | Domain entities, attributes, types, keys, constraints, multiplicities (matches `prisma/schema.prisma`) |
-| `sequence-change-goal-priority.puml` | `kadence-sequence-change-goal-priority.png` / `.svg` | User story "change a goal's priority": UI → Express API → GoalService → Prisma → PostgreSQL |
+| `new_class_diagram_files/kadence-class-diagram.puml` | `new_class_diagram_files/kadence-class-diagram.png` / `.svg` | **Current** class diagram: domain entities, attributes, types, keys, constraints, multiplicities (matches `prisma/schema.prisma`) |
+| `sequence-change-goal-priority.puml` | `kadence-sequence-change-goal-priority.png` / `.svg` | User story 2.4, "change a goal's priority" (issue #12): UI → Express API → GoalService → Prisma → PostgreSQL. Matches `PATCH /api/users/:userId/goals/:goalId/priority` and `updateGoalPriority` in `server/services/goalService.ts`. |
+| `old_class_diagram_files/` | | Earlier version of the class diagram, kept for history; use `new_class_diagram_files/` |
 
-Output file names come from the name after `@startuml` in each source file.
+Output file names come from the name after `@startuml` in each source file. The Sprint 2 feature
+work added no tables or columns, so the class diagram did not need to change.
 
 Attributes whose type contains parentheses (e.g. `String(50)`) are prefixed with `{field}`;
 without it PlantUML treats them as methods and moves them to a separate compartment.

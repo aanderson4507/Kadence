@@ -1,0 +1,281 @@
+.weekly-review {
+  --review-surface: var(--theme-surface, #fff);
+  --review-border: var(--color-border, #dfe6e1);
+  --review-muted: var(--color-muted, #66746b);
+  --review-brand: var(--color-brand, #406b51);
+  --review-track: var(--color-brand-soft, #e5eee8);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.weekly-review h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.weekly-review__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.weekly-review__header p {
+  margin: 4px 0 0;
+  color: var(--review-muted);
+}
+
+.weekly-review__nav {
+  display: flex;
+  gap: 6px;
+}
+
+.weekly-review__nav button,
+.weekly-review__button {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--review-border);
+  border-radius: 6px;
+  color: inherit;
+  background: var(--review-surface);
+  cursor: pointer;
+}
+
+.weekly-review__button:not(:disabled) {
+  border-color: var(--review-brand);
+  color: #fff;
+  background: var(--review-brand);
+}
+
+.weekly-review__nav button:disabled,
+.weekly-review__button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.weekly-review__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.weekly-review__stat {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--review-border);
+  border-radius: 6px;
+  background: var(--review-surface);
+}
+
+.weekly-review__stat span,
+.weekly-review__stat small {
+  overflow: hidden;
+  color: var(--review-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekly-review__stat strong {
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.weekly-review__progress {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--review-track);
+}
+
+.weekly-review__progress span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--review-brand);
+}
+
+.weekly-review__chart {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--review-border);
+  border-radius: 6px;
+  background: var(--review-surface);
+}
+
+.weekly-review__chart figcaption {
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.weekly-review__bars {
+  display: grid;
+  height: 140px;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--review-border);
+}
+
+.weekly-review__bar {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.weekly-review__bar-track,
+.weekly-review__bar-fill {
+  position: absolute;
+  bottom: 0;
+  width: min(28px, 70%);
+  border-radius: 4px 4px 0 0;
+}
+
+.weekly-review__bar-track {
+  background: var(--review-track);
+}
+
+.weekly-review__bar-fill {
+  background: var(--review-brand);
+}
+
+.weekly-review__bar small {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  color: var(--review-muted);
+}
+
+.weekly-review__bar-label {
+  position: absolute;
+  bottom: -22px;
+  color: var(--review-muted);
+  font-size: 12px;
+}
+
+.weekly-review__chart-note {
+  margin: 8px 0 0;
+  color: var(--review-muted);
+  font-size: 12px;
+}
+
+.weekly-review__lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.weekly-review__group {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--review-border);
+  border-radius: 6px;
+  background: var(--review-surface);
+}
+
+.weekly-review__group h2 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.weekly-review__group h2 span {
+  color: var(--review-muted);
+}
+
+.weekly-review__group--warning h2::before {
+  content: "⚠ ";
+}
+
+.weekly-review__group p {
+  margin: 0;
+  color: var(--review-muted);
+}
+
+.weekly-review__group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weekly-review__group li button {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.weekly-review__group li button:hover {
+  background: var(--theme-hover, #f2f6f3);
+}
+
+.weekly-review__group li span {
+  color: var(--review-muted);
+  font-size: 12px;
+}
+
+.weekly-review__reflection {
+  padding: 16px;
+  border: 1px solid var(--review-border);
+  border-radius: 6px;
+  background: var(--review-surface);
+}
+
+.weekly-review__reflection h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.weekly-review__reflection label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weekly-review__reflection textarea {
+  padding: 8px;
+  border: 1px solid var(--review-border);
+  border-radius: 6px;
+  color: inherit;
+  background: var(--theme-input, #fff);
+  font: inherit;
+}
+
+.weekly-review__reflection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.weekly-review__reflection-actions p {
+  margin: 0;
+  color: var(--review-muted);
+}
+
+.weekly-review__error {
+  color: #b3261e;
+}
+
+@media (max-width: 600px) {
+  .weekly-review {
+    padding: 16px;
+  }
+}

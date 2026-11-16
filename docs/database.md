@@ -32,8 +32,8 @@ goal hierarchy and cross-entity links, and constraints would move entirely into 
 | `prisma/seed.ts` | Development data: demo user, goal tree, milestones, tasks, planner week, recurrence, study sessions, notifications |
 | `prisma.config.ts` | Prisma CLI config (schema path, migrations, seed command, `DATABASE_URL`) |
 | `server/db.ts` | Creates the Prisma client with the PostgreSQL adapter |
-| `server/services/` | Data-access and business rules (goal tiers, progress roll-up, completion dates) |
-| `server/app.ts`, `server/index.ts` | Express API (`/api/health`, goals, tasks) |
+| `server/services/` | Data-access and business rules: tasks, goals and milestones, planner events, repeats, study sessions, reminders, weekly review, missed-task rescheduling, settings, sign-in |
+| `server/app.ts`, `server/index.ts` | Express API (every route is listed in [database-setup.md](database-setup.md#api-reference)) |
 | `server/checkConnection.ts` | `npm run db:check` connection test |
 | `.env.example` | Template for the git-ignored `.env` |
 
@@ -99,8 +99,8 @@ larger tier than its child.
 
 ## AI-generated design decisions reviewed and corrected by the team
 
-The data model was drafted with an AI coding agent and then reviewed. These suggestions were
-changed:
+The full review, including Sprint 2 implementation decisions and open assumptions, is in
+[ai-design-review.md](ai-design-review.md). The data-model corrections are repeated here:
 
 1. **Milestones modeled as child goals → separate `Milestone` entity.** The first AI analysis
    recommended reusing the goal hierarchy (`parentGoalId`) for milestones. Reviewing the Figma Goal

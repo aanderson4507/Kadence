@@ -1,98 +1,84 @@
 # Kadence
 
-Kadence is a goals and productivity app built with React, TypeScript, and Vite.
+Kadence is a goals and productivity planner for students, built with React, TypeScript and Vite on
+the front end and an Express + Prisma API backed by PostgreSQL 17.
 
 ## Requirements
 
 - Node.js 20.19+ or 22.12+
-- npm
+- PostgreSQL 17 (local install or Docker), see [docs/database.md](docs/database.md)
 
-## Development
-
-```sh
-npm install
-npm run dev
-```
-
-## Database and API
-
-Kadence stores data in PostgreSQL 17 through Prisma, served by a small Express API in `server/`.
-Full setup (local and shared cloud database) is in [docs/database.md](docs/database.md); teammate onboarding and secret handling are in [docs/team-setup.md](docs/team-setup.md).
+## Run it
 
 ```sh
-cp .env.example .env   # then set your local PostgreSQL password
+npm install            # also generates the Prisma client and enables the secret-check hook
+cp .env.example .env   # then set your local PostgreSQL password in DATABASE_URL
 npm run db:migrate     # create the database and apply migrations
-npm run db:seed        # load development data (demo / kadence-demo)
-npm run db:check       # verify the connection
-npm run dev:api        # API on http://localhost:3001 (Vite proxies /api)
+npm run db:seed        # development data (login: demo / kadence-demo)
+npm run dev:api        # API on http://localhost:3001
+npm run dev            # app on http://localhost:5173 (Vite proxies /api to the API)
 ```
 
-The React screens still use in-memory sample data; connecting them to the API is the next step.
+Open `http://localhost:5173`, log in as `demo` / `kadence-demo` (or create an account), and you land
+on the dashboard. Everything you add or change is saved to PostgreSQL and is still there after
+restarting the app. Opening `/dashboard` directly without logging in uses the demo account
+(development only).
 
-## Tests
+Team setup and secret handling: [docs/team-setup.md](docs/team-setup.md) and
+[docs/database-setup.md](docs/database-setup.md).
+
+## Checks
 
 ```sh
-npm test               # runs server/**/*.test.ts and src/**/*.test.ts (no database needed)
+npm test               # unit tests + database integration tests (skipped if no database is reachable)
+npm run typecheck      # TypeScript for the React app and the server
+npm run build          # type check + production build
+npm run db:check       # database connection and row counts
 ```
 
-## Production build
+The integration tests (`server/database.integration.test.ts`) run against your `DATABASE_URL` inside
+a throwaway account that is deleted afterwards.
 
-```sh
-npm run build
-npm run preview
-```
+## Features (Sprint 2)
 
-The login screen opens at `/`, and the dashboard is available at `/dashboard`.
-The app entry point is `src/App.tsx`; the login and dashboard screens live in
-`src/Login.tsx` and `src/Dashboard.tsx`. Their styles are in `src/Login.css` and
-`src/App.css`, and Figma-exported SVGs are stored in `public/assets`.
+All of these read and write the database; see [docs/user-stories.md](docs/user-stories.md) for the
+GitHub Issue and acceptance criteria behind each one.
 
-Authentication is not connected yet. The demo login accepts any non-empty
-username and password, does not send or store credentials, and opens the
-dashboard.
+- **To-do list:** add tasks with a priority, due date and optional repeat; complete, mark as exam,
+  move to the backlog, delete; filter by priority or status.
+- **Priority setter:** set a task's priority, exam flag and how many reminders a day it gets.
+- **Goals:** big, medium and small goals; break a goal into smaller ones; change priority; complete
+  or delete; progress is calculated from milestones, linked tasks and child goals.
+- **Breakdown:** pick a goal to see its progress, scheduled milestones (add, date, complete,
+  optionally block planner time), connected goals, linked tasks and exam study plan.
+- **Visual Planner:** week/day calendar; add, edit, repeat and delete tasks; filter by priority;
+  **Quick Setup** plans a whole week at once.
+- **Exam study sessions:** Kadence stores study blocks in the planner in the days before each exam,
+  around your existing events, using your study preferences.
+- **Reminders:** notifications before deadlines and planner events, following your reminder settings
+  and Do Not Disturb hours; click one to jump to the task.
+- **Missed tasks:** detected on open and hourly; reschedule them into your open time slots, move them
+  to today or to the backlog, or let Kadence do it automatically per your settings.
+- **Weekly review:** completed vs. pending vs. overdue, completion rate, a per-day chart, goals and
+  milestones finished, and a saved reflection.
+- **Main screen:** Simple (core views, the rest under More) or Advanced (everything plus resizable
+  split view). The mode, open tabs and panel widths are saved per user.
+- **Settings:** profile and all preferences, reminder frequency by priority, open time slots; theme
+  (light/dark) is saved per user.
 
-The dashboard opens to the to-do list with sample tasks. Tasks can be filtered
-by priority (Very High through None), added, completed, and deleted. Changes are
-kept in page state and reset when the page is refreshed.
+## Project layout
 
-The Breakdown view displays the sample website goal, its connected goals, and
-ten milestones. Milestones can be completed or reopened; progress is updated in
-the summary and resets when the page is refreshed.
+| Path | Contents |
+|---|---|
+| `src/` | React screens (`Dashboard.tsx` hosts the views), API client (`api.ts`, `settingsApi.ts`, `http.ts`) |
+| `server/` | Express API (`app.ts`), Prisma client (`db.ts`), services with the business rules (`services/`) |
+| `prisma/` | Schema, migrations and seed data |
+| `docs/` | Database setup, data requirements, AI design review, UML, user stories, Sprint 2 evidence |
+| `public/assets` | Figma-exported SVGs |
 
-The Priority view lets you search tasks, select one, and save or reset its
-priority. Saved priority changes stay in sync with the to-do list until refresh.
+## Known limitations
 
-The Goals view organizes sample goals into big, medium, and small categories.
-Filter categories, add goals, mark goals complete, and open the highlighted
-goal's Breakdown view. Goal changes are kept in page state and reset on refresh.
-
-The Visual Planner displays a sample weekly schedule. Navigate between weeks,
-select tasks, and switch between week and day views. Add tasks with a due date,
-type, goal size, and optional linked task; edit task details, status, schedule,
-description, and notes; or delete tasks with confirmation. Planner changes are
-kept in page state and reset on refresh.
-
-Mark a task as an exam with the **Exam** button when adding it in the To-do
-list, from a task's ⋯ menu, or with **This is an exam** in the Priority setter.
-Kadence then schedules study sessions in the days before the exam inside your
-study hours, around events already in the Visual Planner (use **Next study
-session** to jump to them). The Breakdown page lists each exam's sessions and
-warns when some don't fit. Change the number of study days, session length,
-sessions per day and study hours in Settings → Exam study sessions. Tasks are
-listed in priority order: priority level, then a boost for exams, then the
-nearest deadlines (see `src/taskPriority.ts`; scheduling rules are in
-`src/studySessions.ts`).
-
-Open Settings from the workspace gear or the Goals sidebar. It opens to an
-Overview with your account details and the preferences changed most often
-(theme, accent color, planner view, landing page, default goal priority, and
-key reminders), plus links to every other section: profile, planner, reminders,
-goals, task carryover, weekly review, and privacy. Settings are loaded from and
-saved to the database through `GET`/`PATCH /api/users/:userId/settings`, so the
-API (`npm run dev:api`) must be running. Edits on any section are saved together
-with one **Save changes** click; invalid input or a failed save shows the reason
-and keeps your edits so you can try again. Theme changes apply and save right
-away, including from the header sun/moon button. Until authentication exists,
-Settings uses the seeded demo account. Profile picture uploads are a preview
-only and are not saved yet. Data export downloads the current preferences, tasks, goals,
-and planner events as JSON. Account deletion is for review only in this demo.
+- Sign-in verifies the password against the database, but the API doesn't issue sessions yet; routes
+  are scoped by user id. Use only with development data.
+- Notifications are in-app only (the email/push channel is stored but not sent).
+- Profile picture uploads are a preview and are not saved; account deletion is not connected.
